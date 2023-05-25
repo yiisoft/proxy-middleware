@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yiisoft\Yii\Middleware\Tests;
+namespace Yiisoft\ProxyMiddleware\Tests;
 
 use InvalidArgumentException;
 use HttpSoft\Message\ServerRequest;
@@ -12,8 +12,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 use Yiisoft\Http\Status;
 use Yiisoft\Validator\Validator;
-use Yiisoft\Yii\Middleware\TrustedHostsNetworkResolver;
-use Yiisoft\Yii\Middleware\Tests\TestAsset\MockRequestHandler;
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+use Yiisoft\ProxyMiddleware\Tests\Support\MockRequestHandler;
 
 final class TrustedHostsNetworkResolverTest extends TestCase
 {

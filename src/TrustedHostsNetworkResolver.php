@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yiisoft\Yii\Middleware;
+namespace Yiisoft\ProxyMiddleware;
 
 use Closure;
 use InvalidArgumentException;

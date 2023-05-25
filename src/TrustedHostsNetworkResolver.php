@@ -326,7 +326,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             $ip = $rawHostData['ip'];
             if (!$this->isValidHost($ip)) {
                 // Invalid IP.
-                break;
+                throw new RuntimeException("Proxy returned the invalid IP: \"$ip\". Check its configuration.");
             }
 
             if ($hostsCount >= 3) {

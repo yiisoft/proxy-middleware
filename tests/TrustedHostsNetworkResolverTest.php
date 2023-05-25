@@ -50,13 +50,6 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ],
                 '8.8.8.8',
             ],
-            'hosts: server IP with first few proxies, last trusted proxy is invalid' => [
-                ['x-forwarded-for' => ['9.9.9.9', 'invalid5.5.5.5', '2.2.2.2']],
-                [
-                    ['hosts' => ['5.5.5.5', '2.2.2.2', '127.0.0.1'], 'ipHeaders' => ['x-forwarded-for']],
-                ],
-                '2.2.2.2',
-            ],
 
             // Port headers
 
@@ -727,7 +720,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
     public function testWithAttributeIpsAndEmptyString(): void
     {
         $this->expectException(RuntimeException::class);
-
+        $this->expectExceptionMessage('Attribute should not be empty string.');
         $this->createTrustedHostsNetworkResolver()->withAttributeIps('');
     }
 
@@ -771,6 +764,26 @@ final class TrustedHostsNetworkResolverTest extends TestCase
             $validIp,
             $requestHandler->processedRequest->getAttribute(TrustedHostsNetworkResolver::REQUEST_CLIENT_IP),
         );
+    }
+
+    public function testInvalidTrustedProxy(): void
+    {
+        $middleware = $this
+            ->createTrustedHostsNetworkResolver()
+            ->withAttributeIps('resolvedIps')
+            ->withAddedTrustedHosts(
+                hosts: ['5.5.5.5', '2.2.2.2', '127.0.0.1'],
+                ipHeaders: ['x-forwarded-for'],
+            );
+        $request = $this->createRequestWithSchemaAndHeaders(
+            headers: ['x-forwarded-for' => ['9.9.9.9', 'invalid5.5.5.5', '2.2.2.2']],
+            serverParams: ['REMOTE_ADDR' => '127.0.0.1'],
+        );
+        $requestHandler = new MockRequestHandler();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Proxy returned the invalid IP: "invalid5.5.5.5". Check its configuration.');
+        $middleware->process($request, $requestHandler);
     }
 
     public function dataInvalidIpAndForCombination(): array

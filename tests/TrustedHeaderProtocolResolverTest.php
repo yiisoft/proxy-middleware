@@ -137,7 +137,7 @@ final class TrustedHeaderProtocolResolverTest extends TestCase
                 [
                     'x-forwarded-proto-1' => ['http' => 'http'],
                     'x-forwarded-proto-2' => static function (array $values): string {
-                        return str_contains((string) $values[0], 'https') ? 'https' : 'http';
+                        return str_contains($values[0], 'https') ? 'https' : 'http';
                     },
                     'x-forwarded-proto-3' => ['http' => 'http'],
                 ],

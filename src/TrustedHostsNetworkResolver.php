@@ -80,19 +80,19 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * Name of the request attribute holding IP address obtained from a trusted header.
      */
-    public const REQUEST_CLIENT_IP = 'requestClientIp';
+    final public const REQUEST_CLIENT_IP = 'requestClientIp';
 
     /**
      * Indicates that middleware should obtain IP from `Forwarded` header.
      *
      * @link https://www.rfc-editor.org/rfc/rfc7239.html
      */
-    public const IP_HEADER_TYPE_RFC7239 = 'rfc7239';
+    final public const IP_HEADER_TYPE_RFC7239 = 'rfc7239';
 
     /**
      * List of headers to trust for any trusted host.
      */
-    public const DEFAULT_TRUSTED_HEADERS = [
+    final public const DEFAULT_TRUSTED_HEADERS = [
         // common:
         'x-forwarded-for',
         'x-forwarded-host',
@@ -121,7 +121,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     private array $trustedHosts = [];
     private ?string $attributeIps = null;
 
-    public function __construct(private ValidatorInterface $validator)
+    public function __construct(private readonly ValidatorInterface $validator)
     {
     }
 

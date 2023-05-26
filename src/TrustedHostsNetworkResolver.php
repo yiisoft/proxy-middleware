@@ -333,13 +333,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $hostData = $rawHostData;
             }
 
-            $hostDataListValidated[] = $hostData;
-
             if (!$this->isValidHost($ip, $trustedHostData[self::DATA_KEY_HOSTS])) {
                 // Not trusted host.
+                if ($hostsCount === 2) {
+                    return $this->handleNotTrusted($request, $handler);
+                }
+
                 break;
             }
 
+            $hostDataListValidated[] = $hostData;
             $hostData = $rawHostData;
         } while (count($hostDataListRemaining) > 0);
 

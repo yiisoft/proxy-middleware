@@ -396,6 +396,9 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
      */
     public function testProcessTrusted(array $data): void
     {
+        $headers = [];
+        $remoteAddr = null;
+        $requestHandler = null;
         $expectedClientIp = $data['expectedClientIp'];
         $expectedHttpHost = $data['expectedHttpHost'] ?? null;
         $expectedHttpScheme = $data['expectedHttpScheme'] ?? 'http';

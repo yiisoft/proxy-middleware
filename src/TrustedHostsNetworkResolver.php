@@ -216,10 +216,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 // TODO: Handle empty forwarded list.
 
                 $forwardedHeaderValue = $request->getHeader('forwarded');
-                $proxies = array_merge(
-                    $proxies,
-                    array_reverse($this->getElementsByRfc7239($forwardedHeaderValue)),
-                );
+                $proxies = [...$proxies, ...array_reverse($this->getElementsByRfc7239($forwardedHeaderValue))];
 
                 break;
             }
@@ -541,6 +538,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
     private function getPort(ServerRequestInterface $request, string|array $configValue): ?string
     {
+        $forwardedHeaderGroup = [];
         if (is_string($configValue)) {
             return $request->getHeaderLine($configValue) ?: null;
         }

@@ -322,6 +322,35 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8030,
                 ],
             ],
+            'custom headers, IP related data, protocol mapping' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => ['front-end-https', ['On' => 'https']],
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                    ])
+                    ->withIpsAttribute('resolvedIps'),
+                $this->createRequest(
+                    headers: [
+                        'y-forwarded-for' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'front-end-https' => ['On'],
+                        'y-forwarded-host' => ['example.com'],
+                        'y-forwarded-port' => ['8080'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'protocol' => 'https',
+                    'host' => 'example.com',
+                    'port' => 8080,
+                ],
+            ],
         ];
     }
 

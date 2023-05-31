@@ -238,9 +238,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 // TODO: Add validation.
                 $proxies[] = [
                     'ip' => $requestIp,
-                    'protocol' => $request->getHeaderLine($forwardedHeaderGroup['protocol']) ?: null,
+                    'protocol' => $this->getProtocol($request, $forwardedHeaderGroup['protocol']),
                     'host' => $request->getHeaderLine($forwardedHeaderGroup['host']) ?: null,
-                    'port' => $this->getPort($request, $forwardedHeaderGroup['port']),
+                    'port' => (int) $request->getHeaderLine($forwardedHeaderGroup['port']) ?: null,
                 ];
             }
 
@@ -539,23 +539,25 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         }
     }
 
-    private function getPort(ServerRequestInterface $request, string|array $configValue): ?int
+    private function getProtocol(ServerRequestInterface $request, string|array $configValue): ?string
     {
         if (is_string($configValue)) {
-            return (int) $request->getHeaderLine($configValue) ?: null;
+            return $request->getHeaderLine($configValue) ?: null;
         }
 
         $headerName = $configValue[0];
-        $port = $request->getHeaderLine($headerName);
-        if ($port === '') {
+        $protocol = $request->getHeaderLine($headerName);
+        if ($protocol === '') {
             return null;
         }
 
-        $port = $configValue[1][$port] ?? null;
-        if ($port === null) {
-            throw new RuntimeException('Unable to resolve port via mapping.');
+        // TODO: Support case-insensitive mapping?
+        $protocol = $configValue[1][$protocol] ?? null;
+        if ($protocol === null) {
+            // TODO: Make exception message more helpful.
+            throw new RuntimeException('Unable to resolve protocol via mapping.');
         }
 
-        return (int) $port;
+        return $protocol;
     }
 }

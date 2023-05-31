@@ -475,19 +475,17 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $ipData['ip'] = str_starts_with($host, '[') ? trim($host /* IPv6 */, '[]') : $host;
             }
 
-            // Copy other properties.
-            foreach (['proto' => 'protocol', 'host' => 'host', 'by' => 'by'] as $source => $destination) {
-                if (isset($data[$source])) {
-                    $ipData[$destination] = $data[$source];
-                }
-            }
+            $ipData['protocol'] = $data['proto'] ?? null;
+            $ipData['host'] = $data['host'] ?? null;
 
             if (isset($ipData['host']) && filter_var($ipData['host'], FILTER_VALIDATE_DOMAIN) === false) {
                 // Remove not valid HTTP host.
                 unset($ipData['host']);
             }
 
-            if (isset($matches['port'])) {
+            if (!isset($matches['port'])) {
+                $ipData['port'] = null;
+            } else {
                 $port = $matches['port'];
 
                 if (!$obfuscatedHost && !$this->checkPort($port)) {

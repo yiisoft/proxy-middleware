@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Yiisoft\ProxyMiddleware\Tests;
 
 use InvalidArgumentException;
-use HttpSoft\Message\ServerRequest;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 use Yiisoft\Http\Status;
 use Yiisoft\Validator\Validator;
@@ -25,31 +23,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
     public function dataProcessTrusted(): array
     {
         return [
-            'xForward, level 6' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['172.16.0.1', '18.18.18.18'],
-                        'protocolHeaders' => ['x-forwarded-proto' => ['http' => 'http', 'https' => 'https']],
-                    ],
-                ],
-                'headers' => ['x-forwarded-proto' => ['https']],
-                'expectedClientIp' => '18.18.18.18',
-                'expectedHttpHost' => '',
-                'expectedHttpScheme' => 'https',
-            ]],
-            'rfc7239, level 2' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                        'trustedHeaders' => ['forwarded'],
-                    ],
-                ],
-                'headers' => ['forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
-                'expectedClientIp' => '5.5.5.5',
-            ]],
             'rfc7239, level 2, obfuscated host, unknown' => [[
                 'remoteAddr' => '18.18.18.18',
                 'trustedHosts' => [
@@ -112,72 +85,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
                 'expectedClientIp' => '5.5.5.5',
                 'expectedHttpHost' => 'test',
                 'expectedHttpScheme' => 'https',
-            ]],
-            'rfc7239, level 6, host, protocol, url with query parameters' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                        'hostHeaders' => ['forwarded'],
-                        'protocolHeaders' => ['forwarded' => fn () => ['http' => 'http', 'https' => 'https']],
-                        'urlHeaders' => ['non-existing-header', 'x-rewrite-url'],
-                        'trustedHeaders' => ['forwarded', 'x-rewrite-url'],
-                    ],
-                ],
-                'headers' => [
-                    'forwarded' => ['for=9.9.9.9', 'proto=https;for=5.5.5.5;host=test', 'for=2.2.2.2'],
-                    'x-rewrite-url' => ['/test?test=test'],
-                ],
-                'expectedClientIp' => '5.5.5.5',
-                'expectedHttpHost' => 'test',
-                'expectedHttpScheme' => 'https',
-                'expectedPath' => '/test',
-                'expectedQuery' => 'test=test',
-            ]],
-            'rfc7239, level 6, host, protocol, url without query parameters' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                        'hostHeaders' => ['forwarded'],
-                        'protocolHeaders' => ['forwarded' => fn () => ['http' => 'http', 'https' => 'https']],
-                        'urlHeaders' => ['non-existing-header', 'x-rewrite-url'],
-                        'trustedHeaders' => ['forwarded', 'x-rewrite-url'],
-                    ],
-                ],
-                'headers' => [
-                    'forwarded' => ['for=9.9.9.9', 'proto=https;for=5.5.5.5;host=test', 'for=2.2.2.2'],
-                    'x-rewrite-url' => ['/test'],
-                ],
-                'expectedClientIp' => '5.5.5.5',
-                'expectedHttpHost' => 'test',
-                'expectedHttpScheme' => 'https',
-                'expectedPath' => '/test',
-                'expectedQuery' => '',
-            ]],
-            'rfc7239, level 6, host, protocol, url with badly formed query parameters' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                        'hostHeaders' => ['forwarded'],
-                        'protocolHeaders' => ['forwarded' => fn () => ['http' => 'http', 'https' => 'https']],
-                        'urlHeaders' => ['non-existing-header', 'x-rewrite-url'],
-                        'trustedHeaders' => ['forwarded', 'x-rewrite-url'],
-                    ],
-                ],
-                'headers' => [
-                    'forwarded' => ['for=9.9.9.9', 'proto=https;for=5.5.5.5;host=test', 'for=2.2.2.2'],
-                    'x-rewrite-url' => ['/test?param1=val1?param2=val2'],
-                ],
-                'expectedClientIp' => '5.5.5.5',
-                'expectedHttpHost' => 'test',
-                'expectedHttpScheme' => 'https',
-                'expectedPath' => '/test',
-                'expectedQuery' => 'param1=val1?param2=val2',
             ]],
 
             // Protocol headers

@@ -206,7 +206,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         // TODO: Remove non-typical forwarded headers.
         // TODO: Handle "by".
 
-        $proxies = [['ip' => $remoteAddr]];
+        // TODO: Should default value be used for protocol ("http")?
+        $proxies = [['ip' => $remoteAddr, 'protocol' => null, 'host' => null, 'port' => null]];
         foreach ($this->forwardedHeaderGroups as $forwardedHeaderGroup) {
             if ($forwardedHeaderGroup === self::FORWARDED_HEADER_GROUP_RFC) {
                 if (!$request->hasHeader('forwarded')) {
@@ -230,6 +231,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             $proxies = [];
             $requestIps = array_merge([$remoteAddr], array_reverse($request->getHeader($forwardedHeaderGroup['ip'])));
             foreach ($requestIps as $requestIp) {
+                // TODO: Add validation.
                 $proxies[] = [
                     'ip' => $requestIp,
                     'protocol' => $request->getHeaderLine($forwardedHeaderGroup['protocol']) ?: null,
@@ -455,6 +457,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 break;
             }
 
+            // TODO: Should port be parsed from host instead?
             $pattern = '/^(?<host>' . IpHelper::IPV4_PATTERN . '|unknown|_[\w.-]+|[[]'
                 . IpHelper::IPV6_PATTERN . '[]])(?::(?<port>[\w.-]+))?$/';
 
@@ -472,7 +475,17 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $ipData['ip'] = str_starts_with($host, '[') ? trim($host /* IPv6 */, '[]') : $host;
             }
 
-            $ipData['host'] = $host;
+            // Copy other properties.
+            foreach (['proto' => 'protocol', 'host' => 'host', 'by' => 'by'] as $source => $destination) {
+                if (isset($data[$source])) {
+                    $ipData[$destination] = $data[$source];
+                }
+            }
+
+            if (isset($ipData['host']) && filter_var($ipData['host'], FILTER_VALIDATE_DOMAIN) === false) {
+                // Remove not valid HTTP host.
+                unset($ipData['host']);
+            }
 
             if (isset($matches['port'])) {
                 $port = $matches['port'];
@@ -483,18 +496,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 }
 
                 $ipData['port'] = $obfuscatedHost ? $port : (int) $port;
-            }
-
-            // Copy other properties.
-            foreach (['proto' => 'protocol', 'host' => 'host', 'by' => 'by'] as $source => $destination) {
-                if (isset($data[$source])) {
-                    $ipData[$destination] = $data[$source];
-                }
-            }
-
-            if (isset($ipData['httpHost']) && filter_var($ipData['httpHost'], FILTER_VALIDATE_DOMAIN) === false) {
-                // Remove not valid HTTP host.
-                unset($ipData['httpHost']);
             }
 
             $list[] = $ipData;
@@ -536,24 +537,23 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         }
     }
 
-    private function getPort(ServerRequestInterface $request, string|array $configValue): ?string
+    private function getPort(ServerRequestInterface $request, string|array $configValue): ?int
     {
-        $forwardedHeaderGroup = [];
         if (is_string($configValue)) {
-            return $request->getHeaderLine($configValue) ?: null;
+            return (int) $request->getHeaderLine($configValue) ?: null;
         }
 
-        $headerName = array_key_first($configValue);
+        $headerName = $configValue[0];
         $port = $request->getHeaderLine($headerName);
         if ($port === '') {
             return null;
         }
 
-        $port = $configValue[$forwardedHeaderGroup['port']] ?? null;
+        $port = $configValue[1][$port] ?? null;
         if ($port === null) {
             throw new RuntimeException('Unable to resolve port via mapping.');
         }
 
-        return $port;
+        return (int) $port;
     }
 }

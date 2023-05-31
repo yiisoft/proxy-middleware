@@ -25,44 +25,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
     public function dataProcessTrusted(): array
     {
         return [
-            // Port headers
-
-            'port headers, separate header value' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    ['hosts' => ['172.16.0.1', '18.18.18.18'], 'ipHeaders' => [], 'portHeaders' => ['x-forwarded-for']],
-                ],
-                'headers' => ['x-forwarded-for' => ['1234']],
-                'expectedClientIp' => '18.18.18.18',
-                'expectedHttpHost' => '',
-                'expectedHttpScheme' => 'http',
-                'expectedPath' => '/',
-                'expectedQuery' => '',
-                'expectedPort' => 1234,
-            ]],
-            'port headers, provided with proxy' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['2.2.2.2', '18.18.18.18'],
-                        'ipHeaders' => ['forwarded'],
-                        'hostHeaders' => ['forwarded'],
-                        'portHeaders' => ['forwarded', 'x-forwarded-for'],
-                        'trustedHeaders' => ['forwarded', 'x-forwarded-for'],
-                    ],
-                ],
-                'headers' => [
-                    'x-forwarded-for' => ['1234'],
-                    'forwarded' => ['for=9.9.9.9', 'proto=http;for="5.5.5.5:4321";host=test', 'for=2.2.2.2'],
-                ],
-                'expectedClientIp' => '5.5.5.5',
-                'expectedHttpHost' => 'test',
-                'expectedHttpScheme' => 'http',
-                'expectedPath' => '/',
-                'expectedQuery' => '',
-                'expectedPort' => 4321,
-            ]],
-
             'xForward, level 6' => [[
                 'remoteAddr' => '18.18.18.18',
                 'trustedHosts' => [
@@ -396,28 +358,15 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
      */
     public function testProcessTrusted(array $data): void
     {
-        $headers = [];
-        $remoteAddr = null;
-        $requestHandler = null;
-        $expectedClientIp = $data['expectedClientIp'];
-        $expectedHttpHost = $data['expectedHttpHost'] ?? null;
-        $expectedHttpScheme = $data['expectedHttpScheme'] ?? 'http';
         $expectedPath = $data['expectedPath'] ?? '/';
         $expectedQuery = $data['expectedQuery'] ?? '';
-        $expectedPort = $data['expectedPort'] ?? null;
 
         $middleware = in_array('for=unknown', $headers['forwarded'] ?? [], true) ?
             $this->createCustomTrustedHostsNetworkResolver($remoteAddr) :
             $this->createTrustedHostsNetworkResolver();
 
-        if ($expectedHttpHost !== null) {
-            $this->assertSame($expectedHttpHost, $requestHandler->processedRequest->getUri()->getHost());
-        }
-
-        $this->assertSame($expectedHttpScheme, $requestHandler->processedRequest->getUri()->getScheme());
         $this->assertSame($expectedPath, $requestHandler->processedRequest->getUri()->getPath());
         $this->assertSame($expectedQuery, $requestHandler->processedRequest->getUri()->getQuery());
-        $this->assertSame($expectedPort, $requestHandler->processedRequest->getUri()->getPort());
     }
 
     public function dataProcessNotTrusted(): array

@@ -184,7 +184,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ],
             ],
 
-            'RFC header, IP related data, priority over headers with "X" prefix, IPs attribute set' => [
+            'RFC header, priority over headers with "X" prefix, IP related data, IPs attribute set' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -192,10 +192,11 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this->createRequest(
                     headers: [
                         'forwarded' => [
-                            'for="9.9.9.9:8083";host=example3.com;proto=http',
-                            'for="5.5.5.5:8082";host=example2.com;proto=https',
-                            'for="2.2.2.2:8081";host=example1.com;proto=http',
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
                         ],
+                        'x-forwarded-for' => ['9.9.9.9', '8.8.8.8', '2.2.2.2'],
                         'x-forwarded-proto' => ['http'],
                         'x-forwarded-host' => ['example4.com'],
                         'x-forwarded-port' => ['8084'],
@@ -226,7 +227,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8082,
                 ],
             ],
-            'headers with "X" prefix, IP related data, IPs attribute set' => [
+            'headers with "X" prefix, RFC header not in request, IP related data, IPs attribute set' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -262,6 +263,63 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'protocol' => 'https',
                     'host' => 'example.com',
                     'port' => 8080,
+                ],
+            ],
+            'custom headers, highest priority, IP related data, IPs attribute set' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => 'y-forwarded-proto',
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                        TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
+                        TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
+                    ])
+                    ->withIpsAttribute('resolvedIps'),
+                $this->createRequest(
+                    headers: [
+                        'forwarded' => [
+                            'for=9.9.9.9:8013;proto=http;host=example13.com',
+                            'for=8.8.8.8:8012;proto=http;host=example12.com',
+                            'for=2.2.2.2:8011;proto=http;host=example11.com',
+                        ],
+                        'x-forwarded-for' => ['9.9.9.9', '5.5.5.5', '1.1.1.1'],
+                        'x-forwarded-proto' => ['http'],
+                        'x-forwarded-host' => ['example2.com'],
+                        'x-forwarded-port' => ['8020'],
+                        'y-forwarded-for' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'y-forwarded-proto' => ['https'],
+                        'y-forwarded-host' => ['example3.com'],
+                        'y-forwarded-port' => ['8030'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => 'https',
+                                'host' => 'example3.com',
+                                'port' => 8030,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => 'https',
+                                'host' => 'example3.com',
+                                'port' => 8030,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example3.com',
+                    'port' => 8030,
                 ],
             ],
         ];

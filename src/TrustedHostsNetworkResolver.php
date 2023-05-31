@@ -104,10 +104,14 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         'host' => 'x-forwarded-host',
         'port' => 'x-forwarded-port',
     ];
+    public const DEFAULT_FORWARDED_HEADER_GROUPS = [
+        self::FORWARDED_HEADER_GROUP_RFC,
+        self::FORWARDED_HEADER_GROUP_X_PREFIX,
+    ];
 
     private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
     private array $trustedHosts = [];
-    private array $forwardedHeaderGroups = [self::FORWARDED_HEADER_GROUP_RFC, self::FORWARDED_HEADER_GROUP_X_PREFIX];
+    private array $forwardedHeaderGroups = self::DEFAULT_FORWARDED_HEADER_GROUPS;
 
     private ?string $ipsAttribute = null;
 

@@ -45,28 +45,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
                 'headers' => ['forwarded' => ['for=unknown:1']],
                 'expectedClientIp' => '18.18.18.18',
             ]],
-            'rfc7239, level 5, host, protocol, multiple headers, uppercase' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                        'hostHeaders' => ['x-forwarded-host', 'forwarded', 'forwarded-custom'],
-                        'protocolHeaders' => [
-                            'x-forwarded-proto' => ['http' => 'http'],
-                            'FORWARDED' => ['http' => 'http', 'https' => 'https'],
-                        ],
-                        'trustedHeaders' => ['forwarded', 'forwarded-custom'],
-                    ],
-                ],
-                'headers' => [
-                    'forwarded' => ['for=9.9.9.9', 'proto=https;for=5.5.5.5;host=test', 'for=2.2.2.2'],
-                    'forwarded-custom' => ['for=7.7.7.7', 'proto=https;for=4.4.4.4;host=test', 'for=1.1.1.1'],
-                ],
-                'expectedClientIp' => '5.5.5.5',
-                'expectedHttpHost' => 'test',
-                'expectedHttpScheme' => 'https',
-            ]],
 
             // Protocol headers
 
@@ -578,13 +556,13 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
         $middleware = new class (
             new Validator(),
         ) extends TrustedHostsNetworkResolver {
-            public function isValidHost(string $host, array $ranges = []): bool
+            public function checkIp(string $ip, array $ranges = []): bool
             {
-                return $host === '5.5.5.5' ? false : parent::isValidHost($host, $ranges);
+                return $ip === '5.5.5.5' ? false : parent::checkIp($ip, $ranges);
             }
         };
-        $this->assertFalse($middleware->isValidHost('5.5.5.5'));
-        $this->assertTrue($middleware->isValidHost('2.2.2.2'));
+        $this->assertFalse($middleware->checkIp('5.5.5.5'));
+        $this->assertTrue($middleware->checkIp('2.2.2.2'));
     }
 
     public function testImmutability(): void
@@ -612,7 +590,7 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
                 parent::__construct(new Validator());
             }
 
-            protected function reverseObfuscate(
+            protected function reverseObfuscateHostData(
                 ?array $proxy,
                 array $validatedProxies,
                 array $remainingProxies,

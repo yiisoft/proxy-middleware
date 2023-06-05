@@ -17,7 +17,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
     public function dataProcess(): array
     {
         return [
-            'remote addr not set, IPs attribute set' => [
+            'remote addr not set' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '19.19.19.19'])
@@ -30,7 +30,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'ipsAttribute' => ['resolvedIps', null],
                 ],
             ],
-            'neither remote addr, nor proxies from request are in trusted hosts, IPs attribute set' => [
+            'neither remote addr, nor proxies from request are in trusted hosts' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '19.19.19.19'])
@@ -45,73 +45,206 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ],
             ],
 
-            'RFC header, only remote addr in trusted hosts' => [
-                $this->createMiddleware()->withTrustedHosts(['8.8.8.8', '18.18.18.18']),
+            'RFC header, in request, remote addr in trusted hosts' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
+                    ->withIpsAttribute('resolvedIps'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
-            'headers with "X" prefix, only remote addr in trusted hosts' => [
-                $this->createMiddleware()->withTrustedHosts(['8.8.8.8', '18.18.18.18']),
+            'headers with "X" prefix, in request, remote addr in trusted hosts' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
+                    ->withIpsAttribute('resolvedIps'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'forwarded headers are not in request, remote addr in trusted hosts' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
+                    ->withIpsAttribute('resolvedIps'),
+                $this->createRequest(
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '18.18.18.18',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
             'RFC header, remote addr and first proxy from request in trusted hosts, header is not allowed' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
-                    ->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX]),
+                    ->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX])
+                    ->withIpsAttribute('resolvedIps'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
             'headers with "X" prefix, remote addr and first proxy from request in trusted hosts, header is not allowed' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
-                    ->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC]),
+                    ->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC])
+                    ->withIpsAttribute('resolvedIps'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
             'RFC header, remote addr and first proxy from request in trusted hosts' => [
-                $this->createMiddleware()->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this
+                    ->createMiddleware()
+                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withIpsAttribute('resolvedIps'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
             'headers with "X" prefix, remote addr and first proxy from request in trusted hosts' => [
-                $this->createMiddleware()->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this
+                    ->createMiddleware()
+                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withIpsAttribute('resolvedIps'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
-            'RFC header, remote addr and first 2 proxies from request in trusted hosts, IPs attribute set' => [
+            'RFC header, remote addr and first 2 proxies from request in trusted hosts' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
@@ -130,24 +263,30 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                                 'protocol' => null,
                                 'host' => null,
                                 'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                             [
                                 'ip' => '2.2.2.2',
                                 'protocol' => null,
                                 'host' => null,
                                 'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                             [
                                 'ip' => '5.5.5.5',
                                 'protocol' => null,
                                 'host' => null,
                                 'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                         ],
                     ],
                 ],
             ],
-            'headers with "X" prefix, remote addr and first 2 proxies from request in trusted hosts, IPs attribute set' => [
+            'headers with "X" prefix, remote addr and first 2 proxies from request in trusted hosts' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
@@ -166,25 +305,31 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                                 'protocol' => null,
                                 'host' => null,
                                 'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                             [
                                 'ip' => '2.2.2.2',
                                 'protocol' => null,
                                 'host' => null,
                                 'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                             [
                                 'ip' => '5.5.5.5',
                                 'protocol' => null,
                                 'host' => null,
                                 'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                         ],
                     ],
                 ],
             ],
 
-            'RFC header, priority over headers with "X" prefix, IP related data, IPs attribute set' => [
+            'RFC header, priority over headers with "X" prefix, IP related data' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -213,12 +358,16 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                                 'protocol' => null,
                                 'host' => null,
                                 'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                             [
                                 'ip' => '2.2.2.2',
                                 'protocol' => 'http',
                                 'host' => 'example1.com',
                                 'port' => 8081,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                         ],
                     ],
@@ -227,7 +376,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8082,
                 ],
             ],
-            'headers with "X" prefix, RFC header not in request, IP related data, IPs attribute set' => [
+            'headers with "X" prefix, RFC header not in request, IP related data' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -251,12 +400,16 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                                 'protocol' => 'https',
                                 'host' => 'example.com',
                                 'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                             [
                                 'ip' => '2.2.2.2',
                                 'protocol' => 'https',
                                 'host' => 'example.com',
                                 'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                         ],
                     ],
@@ -265,7 +418,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
-            'custom headers, highest priority, IP related data, IPs attribute set' => [
+            'custom headers, highest priority, IP related data' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -308,12 +461,16 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                                 'protocol' => 'https',
                                 'host' => 'example3.com',
                                 'port' => 8030,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                             [
                                 'ip' => '2.2.2.2',
                                 'protocol' => 'https',
                                 'host' => 'example3.com',
                                 'port' => 8030,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
                             ],
                         ],
                     ],
@@ -346,6 +503,27 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
+                    'ipsAttribute' => [
+                        'resolvedIps',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => 'https',
+                                'host' => 'example.com',
+                                'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => 'https',
+                                'host' => 'example.com',
+                                'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
                     'protocol' => 'https',
                     'host' => 'example.com',
                     'port' => 8080,
@@ -374,13 +552,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             $expectedData['requestClientIp'],
             $processedRequest->getAttribute(TrustedHostsNetworkResolver::ATTRIBUTE_REQUEST_CLIENT_IP),
         );
-
-        if (isset($expectedData['ipsAttribute'])) {
-            $this->assertSame(
-                $expectedData['ipsAttribute'][1],
-                $processedRequest->getAttribute($expectedData['ipsAttribute'][0]),
-            );
-        }
+        $this->assertSame(
+            $expectedData['ipsAttribute'][1],
+            $processedRequest->getAttribute($expectedData['ipsAttribute'][0]),
+        );
 
         $uri = $processedRequest->getUri();
 

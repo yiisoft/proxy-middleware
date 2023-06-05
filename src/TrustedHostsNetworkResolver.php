@@ -467,7 +467,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 }
 
                 $forwardedHeaderValue = $request->getHeader(self::FORWARDED_HEADER_RFC);
-                $items = array_merge($items, array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue)));
+                $items = [...$items, ...array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue))];
 
                 break;
             }

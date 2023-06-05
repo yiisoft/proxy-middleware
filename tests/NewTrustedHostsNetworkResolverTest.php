@@ -20,7 +20,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             'remote addr not set' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '19.19.19.19'])
+                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
@@ -30,10 +30,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
-            'neither remote addr, nor proxies from request are in trusted hosts' => [
+            'neither remote addr, nor proxies from request are in trusted IPs' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '19.19.19.19'])
+                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
@@ -45,10 +45,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ],
             ],
 
-            'RFC header, in request, remote addr in trusted hosts' => [
+            'RFC header, in request, remote addr in trusted IPs' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
@@ -71,10 +71,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'headers with "X" prefix, in request, remote addr in trusted hosts' => [
+            'headers with "X" prefix, in request, remote addr in trusted IPs' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
@@ -97,10 +97,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'forwarded headers are not in request, remote addr in trusted hosts' => [
+            'forwarded headers are not in request, remote addr in trusted IPs' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
@@ -122,10 +122,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'RFC header, remote addr and first proxy from request in trusted hosts, header is not allowed' => [
+            'RFC header, remote addr and first proxy from request in trusted IPs, header is not allowed' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
@@ -149,10 +149,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'headers with "X" prefix, remote addr and first proxy from request in trusted hosts, header is not allowed' => [
+            'headers with "X" prefix, remote addr and first proxy from request in trusted IPs, header is not allowed' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
@@ -176,10 +176,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'RFC header, remote addr and first proxy from request in trusted hosts' => [
+            'RFC header, remote addr and first proxy from request in trusted IPs' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
@@ -210,10 +210,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'headers with "X" prefix, remote addr and first proxy from request in trusted hosts' => [
+            'headers with "X" prefix, remote addr and first proxy from request in trusted IPs' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
@@ -244,10 +244,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'RFC header, remote addr and first 2 proxies from request in trusted hosts' => [
+            'RFC header, remote addr and first 2 proxies from request in trusted IPs' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=7.7.7.7', 'for=5.5.5.5', 'for=2.2.2.2']],
@@ -286,10 +286,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'headers with "X" prefix, remote addr and first 2 proxies from request in trusted hosts' => [
+            'headers with "X" prefix, remote addr and first 2 proxies from request in trusted IPs' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-forwarded-for' => ['9.9.9.9', '7.7.7.7', '5.5.5.5', '2.2.2.2']],
@@ -332,7 +332,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             'RFC header, priority over headers with "X" prefix, IP related data' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: [
@@ -379,7 +379,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             'headers with "X" prefix, RFC header not in request, IP related data' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: [
@@ -421,7 +421,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             'custom headers, highest priority, IP related data' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withForwardedHeaderGroups([
                         [
                             'ip' => 'y-forwarded-for',
@@ -482,7 +482,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             'custom headers, IP related data, protocol mapping' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withForwardedHeaderGroups([
                         [
                             'ip' => 'y-forwarded-for',

@@ -38,27 +38,6 @@ use function trim;
  * Make sure that the trusted host always overwrites or removes user-defined headers
  * to avoid security issues.
  *
- * ```php
- * $trustedHostsNetworkResolver->withAddedTrustedHosts(
- *     // List of secure hosts including "$_SERVER['REMOTE_ADDR']".
- *     hosts: ['1.1.1.1', '2.2.2.1/3', '2001::/32', 'localhost'].
- *     // IP list headers.
- *     // Headers containing multiple sub-elements (e.g. RFC 7239) must also be listed for other relevant types
- *     // (such as host headers), otherwise they will only be used as an IP list.
- *     ipHeaders: ['x-forwarded-for', [TrustedHostsNetworkResolver::IP_HEADER_TYPE_RFC7239, 'forwarded']]
- *     // Protocol headers with accepted protocols and corresponding header values. Matching is case-insensitive.
- *     protocolHeaders: ['front-end-https' => ['https' => 'on']],
- *     // List of headers containing HTTP host.
- *     hostHeaders: ['forwarded', 'x-forwarded-for']
- *     // List of headers containing HTTP URL.
- *     urlHeaders: ['x-rewrite-url'],
- *     // List of headers containing port number.
- *     portHeaders: ['x-rewrite-port'],
- *     // List of trusted headers. For untrusted hosts, middleware removes these from the request.
- *     trustedHeaders: ['x-forwarded-for', 'forwarded', ...],
- * );
- * ```
- *
  * @psalm-type ConnectionChainItem = array{
  *     ip: ?string,
  *     protocol: ?string,
@@ -105,7 +84,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     ];
 
     private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
-    private array $trustedHosts = [];
+    private array $trustedIps = [];
     private array $forwardedHeaderGroups = self::DEFAULT_FORWARDED_HEADER_GROUPS;
     private ?string $connectionChainItemsAttribute = null;
 
@@ -113,43 +92,19 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
     }
 
-    /**
-     * Returns a new instance with the added trusted hosts and related headers.
-     *
-     * The header lists are evaluated in the order they were specified.
-     *
-     * Make sure that the trusted host always overwrites or removes user-defined headers
-     * to avoid security issues.
-     *
-     * @param string[] $hosts List of trusted host IP addresses. The {@see checkIp()} method could be overwritten in
-     * a subclass to allow using domain names with reverse DNS resolving, for example `yiiframework.com`,
-     * `*.yiiframework.com`. You can specify IPv4, IPv6, domains, and aliases. See {@see Ip}.
-     * @param array $ipHeaders List of headers containing IP. For advanced handling of headers see
-     * {@see TrustedHostsNetworkResolver::IP_HEADER_TYPE_RFC7239}.
-     * @param array $protocolHeaders List of headers containing protocol. e.g.
-     * `['x-forwarded-for' => ['http' => 'http', 'https' => ['on', 'https']]]`.
-     * @param string[] $hostHeaders List of headers containing HTTP host.
-     * @param string[] $urlHeaders List of headers containing HTTP URL.
-     * @param string[] $portHeaders List of headers containing port number.
-     * @param string[]|null $trustedHeaders List of trusted headers. For untrusted hosts, middleware removes these from
-     * the request.
-     */
-    public function withTrustedHosts(array $trustedHosts): self {
-        if (empty($trustedHosts)) {
-            throw new InvalidArgumentException('Empty trusted hosts are not allowed.');
+    public function withTrustedIps(array $trustedIps): self {
+        if (empty($trustedIps)) {
+            throw new InvalidArgumentException('Empty trusted IPs are not allowed.');
         }
 
-        // TODO: Use one loop.
-        $this->requireListOfNonEmptyStrings($trustedHosts, 'trusted hosts');
-
-        foreach ($trustedHosts as $host) {
+        foreach ($trustedIps as $host) {
             if (!$this->checkIp($host)) {
-                throw new InvalidArgumentException("\"$host\" host must be a valid IP address.");
+                throw new InvalidArgumentException("\"$host\" is not a valid IP address.");
             }
         }
 
         $new = clone $this;
-        $new->trustedHosts = $trustedHosts;
+        $new->trustedIps = $trustedIps;
 
         return $new;
     }
@@ -360,6 +315,59 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $request;
     }
 
+    private function getConnectionChainItems(ServerRequestInterface $request): array
+    {
+        /** @var string|null $remoteAddr */
+        $remoteAddr = $request->getServerParams()['REMOTE_ADDR'] ?? null;
+        if ($remoteAddr === null) {
+            return [];
+        }
+
+        $items = [
+            [
+                'ip' => $remoteAddr,
+                'protocol' => null,
+                'host' => null,
+                'port' => null,
+                'hiddenIp' => null,
+                'hiddenPort' => null,
+            ],
+        ];
+        foreach ($this->forwardedHeaderGroups as $forwardedHeaderGroup) {
+            if ($forwardedHeaderGroup === self::FORWARDED_HEADER_GROUP_RFC) {
+                if (!$request->hasHeader(self::FORWARDED_HEADER_RFC)) {
+                    continue;
+                }
+
+                $forwardedHeaderValue = $request->getHeader(self::FORWARDED_HEADER_RFC);
+                $items = [...$items, ...array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue))];
+
+                break;
+            }
+
+            if (!$request->hasHeader($forwardedHeaderGroup['ip'])) {
+                continue;
+            }
+
+            $items = [];
+            $requestIps = array_merge([$remoteAddr], array_reverse($request->getHeader($forwardedHeaderGroup['ip'])));
+            foreach ($requestIps as $requestIp) {
+                $items[] = [
+                    'ip' => $requestIp,
+                    'protocol' => $this->getProtocol($request, $forwardedHeaderGroup['protocol']),
+                    'host' => $request->getHeaderLine($forwardedHeaderGroup['host']) ?: null,
+                    'port' => $request->getHeaderLine($forwardedHeaderGroup['port']) ?: null,
+                    'hiddenIp' => null,
+                    'hiddenPort' => null,
+                ];
+            }
+
+            break;
+        }
+
+        return $items;
+    }
+
     /**
      * Forwarded elements by RFC7239.
      *
@@ -440,57 +448,26 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $proxies;
     }
 
-    private function getConnectionChainItems(ServerRequestInterface $request): array
+    private function getProtocol(ServerRequestInterface $request, string|array $configValue): ?string
     {
-        /** @var string|null $remoteAddr */
-        $remoteAddr = $request->getServerParams()['REMOTE_ADDR'] ?? null;
-        if ($remoteAddr === null) {
-            return [];
+        if (is_string($configValue)) {
+            return $request->getHeaderLine($configValue) ?: null;
         }
 
-        $items = [
-            [
-                'ip' => $remoteAddr,
-                'protocol' => null,
-                'host' => null,
-                'port' => null,
-                'hiddenIp' => null,
-                'hiddenPort' => null,
-            ],
-        ];
-        foreach ($this->forwardedHeaderGroups as $forwardedHeaderGroup) {
-            if ($forwardedHeaderGroup === self::FORWARDED_HEADER_GROUP_RFC) {
-                if (!$request->hasHeader(self::FORWARDED_HEADER_RFC)) {
-                    continue;
-                }
-
-                $forwardedHeaderValue = $request->getHeader(self::FORWARDED_HEADER_RFC);
-                $items = [...$items, ...array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue))];
-
-                break;
-            }
-
-            if (!$request->hasHeader($forwardedHeaderGroup['ip'])) {
-                continue;
-            }
-
-            $items = [];
-            $requestIps = array_merge([$remoteAddr], array_reverse($request->getHeader($forwardedHeaderGroup['ip'])));
-            foreach ($requestIps as $requestIp) {
-                $items[] = [
-                    'ip' => $requestIp,
-                    'protocol' => $this->getProtocol($request, $forwardedHeaderGroup['protocol']),
-                    'host' => $request->getHeaderLine($forwardedHeaderGroup['host']) ?: null,
-                    'port' => $request->getHeaderLine($forwardedHeaderGroup['port']) ?: null,
-                    'hiddenIp' => null,
-                    'hiddenPort' => null,
-                ];
-            }
-
-            break;
+        $headerName = $configValue[0];
+        $protocol = $request->getHeaderLine($headerName);
+        if ($protocol === '') {
+            return null;
         }
 
-        return $items;
+        // TODO: Support case-insensitive mapping?
+        $protocol = $configValue[1][$protocol] ?? null;
+        if ($protocol === null) {
+            // TODO: Make exception message more helpful.
+            throw new RuntimeException('Unable to resolve protocol via mapping.');
+        }
+
+        return $protocol;
     }
 
     private function iterateConnectionChainItems(
@@ -531,6 +508,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 throw new InvalidProxyDataException("\"$protocol\" is not a valid protocol.");
             }
 
+            $host = $rawItem['host'];
+            if ($host !== null && !$this->checkHost($host)) {
+                throw new InvalidProxyDataException("\"$host\" is not a valid host.");
+            }
+
             $port = $rawItem['port'];
             if ($port !== null) {
                 if (!$this->checkPort($port)) {
@@ -544,7 +526,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $item = $rawItem;
             }
 
-            if (!$this->checkIp($ip, $this->trustedHosts)) {
+            if (!$this->checkIp($ip, $this->trustedIps)) {
                 break;
             }
 
@@ -558,6 +540,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     private function checkProtocol(string $scheme): bool
     {
         return in_array($scheme, ['http', 'https']);
+    }
+
+    private function checkHost(string $host): bool
+    {
+        return filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
     }
 
     private function checkPort(string $port): bool
@@ -575,43 +562,5 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         $intPort = (int) $port;
 
         return $intPort >= 1 && $intPort <= 65535;
-    }
-
-    /**
-     * @psalm-assert array<non-empty-string> $array
-     */
-    private function requireListOfNonEmptyStrings(array $array, string $arrayName): void
-    {
-        foreach ($array as $item) {
-            if (!is_string($item)) {
-                throw new InvalidArgumentException("Each \"$arrayName\" item must be string.");
-            }
-
-            if (trim($item) === '') {
-                throw new InvalidArgumentException("Each \"$arrayName\" item must be non-empty string.");
-            }
-        }
-    }
-
-    private function getProtocol(ServerRequestInterface $request, string|array $configValue): ?string
-    {
-        if (is_string($configValue)) {
-            return $request->getHeaderLine($configValue) ?: null;
-        }
-
-        $headerName = $configValue[0];
-        $protocol = $request->getHeaderLine($headerName);
-        if ($protocol === '') {
-            return null;
-        }
-
-        // TODO: Support case-insensitive mapping?
-        $protocol = $configValue[1][$protocol] ?? null;
-        if ($protocol === null) {
-            // TODO: Make exception message more helpful.
-            throw new RuntimeException('Unable to resolve protocol via mapping.');
-        }
-
-        return $protocol;
     }
 }

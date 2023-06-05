@@ -23,7 +23,6 @@ use Yiisoft\Validator\ValidatorInterface;
 use function array_reverse;
 use function array_shift;
 use function count;
-use function filter_var;
 use function is_array;
 use function is_callable;
 use function is_string;
@@ -108,8 +107,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
     private array $trustedHosts = [];
     private array $forwardedHeaderGroups = self::DEFAULT_FORWARDED_HEADER_GROUPS;
-
-    private ?string $ipsAttribute = null;
+    private ?string $connectionChainItemsAttribute = null;
 
     public function __construct(private ValidatorInterface $validator)
     {
@@ -178,14 +176,14 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      *
      * @see parseProxiesFromRfcHeader()
      */
-    public function withIpsAttribute(?string $attribute): self
+    public function withConnectionChainItemsAttribute(?string $attribute): self
     {
         if ($attribute === '') {
             throw new RuntimeException('Attribute should not be empty string.');
         }
 
         $new = clone $this;
-        $new->ipsAttribute = $attribute;
+        $new->connectionChainItemsAttribute = $attribute;
         return $new;
     }
 
@@ -208,8 +206,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             return $this->handleNotTrusted($request, $handler);
         }
 
-        if ($this->ipsAttribute !== null) {
-            $request = $request->withAttribute($this->ipsAttribute, $validatedConnectionChainItems);
+        if ($this->connectionChainItemsAttribute !== null) {
+            $request = $request->withAttribute($this->connectionChainItemsAttribute, $validatedConnectionChainItems);
         }
 
         $uri = $request->getUri();
@@ -296,8 +294,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
     ): ResponseInterface {
-        if ($this->ipsAttribute !== null) {
-            $request = $request->withAttribute($this->ipsAttribute, null);
+        if ($this->connectionChainItemsAttribute !== null) {
+            $request = $request->withAttribute($this->connectionChainItemsAttribute, null);
         }
 
         return $handler->handle($request->withAttribute(self::ATTRIBUTE_REQUEST_CLIENT_IP, null));

@@ -21,27 +21,27 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '19.19.19.19'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
                 ),
                 [
                     'requestClientIp' => null,
-                    'ipsAttribute' => ['resolvedIps', null],
+                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
             'neither remote addr, nor proxies from request are in trusted hosts' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '19.19.19.19'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => null,
-                    'ipsAttribute' => ['resolvedIps', null],
+                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
 
@@ -49,15 +49,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -75,15 +75,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -101,14 +101,14 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -127,15 +127,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -154,15 +154,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '18.18.18.18',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -180,15 +180,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -214,15 +214,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -248,15 +248,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['Forwarded' => ['for=9.9.9.9', 'for=7.7.7.7', 'for=5.5.5.5', 'for=2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '7.7.7.7',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -290,15 +290,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-forwarded-for' => ['9.9.9.9', '7.7.7.7', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => '7.7.7.7',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -333,7 +333,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: [
                         'Forwarded' => [
@@ -350,8 +350,8 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -380,7 +380,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this
                     ->createMiddleware()
                     ->withTrustedHosts(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: [
                         'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
@@ -392,8 +392,8 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -432,7 +432,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                         TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
                         TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
                     ])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: [
                         'Forwarded' => [
@@ -453,8 +453,8 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -491,7 +491,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                             'port' => 'y-forwarded-port',
                         ],
                     ])
-                    ->withIpsAttribute('resolvedIps'),
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: [
                         'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
@@ -503,8 +503,8 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ),
                 [
                     'requestClientIp' => '5.5.5.5',
-                    'ipsAttribute' => [
-                        'resolvedIps',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
                         [
                             [
                                 'ip' => '18.18.18.18',
@@ -553,8 +553,8 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             $processedRequest->getAttribute(TrustedHostsNetworkResolver::ATTRIBUTE_REQUEST_CLIENT_IP),
         );
         $this->assertSame(
-            $expectedData['ipsAttribute'][1],
-            $processedRequest->getAttribute($expectedData['ipsAttribute'][0]),
+            $expectedData['connectionChainItemsAttribute'][1],
+            $processedRequest->getAttribute($expectedData['connectionChainItemsAttribute'][0]),
         );
 
         $uri = $processedRequest->getUri();

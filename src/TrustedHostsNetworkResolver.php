@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Yiisoft\ProxyMiddleware;
 
-use Closure;
 use InvalidArgumentException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -19,17 +18,6 @@ use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
 use Yiisoft\ProxyMiddleware\Exception\InvalidRfcProxyItemException;
 use Yiisoft\Validator\Rule\Ip;
 use Yiisoft\Validator\ValidatorInterface;
-
-use function array_reverse;
-use function array_shift;
-use function count;
-use function is_array;
-use function is_callable;
-use function is_string;
-use function preg_match;
-use function str_starts_with;
-use function strtolower;
-use function trim;
 
 /**
  * Trusted hosts network resolver can set IP, protocol, host, URL, and port based on trusted headers such as
@@ -82,6 +70,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         self::FORWARDED_HEADER_GROUP_RFC,
         self::FORWARDED_HEADER_GROUP_X_PREFIX,
     ];
+
+    private const ALLOWED_PROTOCOLS = ['http', 'https'];
 
     private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
     private array $trustedIps = [];
@@ -505,7 +495,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             $protocol = $rawItem['protocol'];
             if ($protocol !== null && !$this->checkProtocol($protocol)) {
-                throw new InvalidConnectionChainItemException("\"$protocol\" is not a valid protocol.");
+                $allowedProtocolsStr = implode('", "', self::ALLOWED_PROTOCOLS);
+                $message = "\"$protocol\" protocol is not allowed. Allowed values are: \"$allowedProtocolsStr\" " .
+                    '(case-sensitive).';
+
+                throw new InvalidConnectionChainItemException($message);
             }
 
             $host = $rawItem['host'];
@@ -537,9 +531,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $item;
     }
 
-    private function checkProtocol(string $scheme): bool
+    private function checkProtocol(string $protocol): bool
     {
-        return in_array($scheme, ['http', 'https']);
+        return in_array($protocol, self::ALLOWED_PROTOCOLS);
     }
 
     private function checkHost(string $host): bool

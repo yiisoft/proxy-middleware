@@ -530,6 +530,49 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
+            'RFC header, IP related data, case-insensitive protocol' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=HTTPS;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => 'http',
+                                'host' => 'example1.com',
+                                'port' => 8081,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example2.com',
+                    'port' => 8082,
+                ],
+            ],
             'RFC header, IP related data, min allowed port' => [
                 $this
                     ->createMiddleware()
@@ -663,6 +706,20 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 '"invalid5.5.5.5" is not a valid IP.',
+            ],
+            'protocol' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https1;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"https1" protocol is not allowed. Allowed values are: "http", "https" (case-sensitive).',
             ],
             'port, contains non-digits' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),

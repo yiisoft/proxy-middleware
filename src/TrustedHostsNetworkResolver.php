@@ -85,13 +85,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     public function withTrustedIps(array $trustedIps): self {
-        if (empty($trustedIps)) {
-            throw new InvalidArgumentException('Empty trusted IPs are not allowed.');
-        }
+        $this->assertNonEmpty($trustedIps, 'Trusted IPs');
 
         foreach ($trustedIps as $host) {
             if (!$this->checkIp($host)) {
-                throw new InvalidArgumentException("\"$host\" is not a valid IP address.");
+                throw new InvalidArgumentException("\"$host\" is not a valid IP.");
             }
         }
 
@@ -103,7 +101,53 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
     public function withForwardedHeaderGroups(array $headerGroups): self
     {
-        // TODO: Validate forwarded header groups.
+        $this->assertNonEmpty($headerGroups, 'Forwarded header groups');
+
+        $allowedHeaderGroupKeys = ['ip', 'protocol', 'host', 'port'];
+        foreach ($headerGroups as $headerGroup) {
+            if (is_array($headerGroup)) {
+                $this->assertNonEmpty($headerGroup, 'Forwarded header group array');
+                $this->assertExactKeysForArray($allowedHeaderGroupKeys, $headerGroup, 'forwarded header group');
+
+                foreach (['ip', 'host', 'port'] as $key) {
+                    $this->assertIsHeaderName($headerGroup[$key], $key);
+                }
+
+                if (is_string($headerGroup['protocol'])) {
+                    $this->assertNonEmpty($headerGroup['protocol'], 'Header name for "protocol"');
+                } elseif (is_array($headerGroup['protocol'])) {
+                    $this->assertNonEmpty($headerGroup['protocol'], 'Protocol header config array');
+                    $this->assertExactKeysForArray([0, 1], $headerGroup['protocol'], 'protocol header config');
+                    $this->assertIsHeaderName($headerGroup['protocol'][0], 'protocol');
+
+                    if (is_array($headerGroup['protocol'][1])) {
+                        $this->assertNonEmpty($headerGroup['protocol'][1], 'Values in mapping for protocol header');
+
+                        foreach ($headerGroup['protocol'][1] as $key => $value) {
+                            $this->assertIsNonEmptyString($key, 'Key in mapping for protocol header');
+                            $this->assertIsAllowedProtocol($value, 'Value in mapping for protocol header');
+                        }
+                    } elseif(!is_callable($headerGroup['protocol'][1])) {
+                        $message = 'Protocol header resolving must be specified either via an associative array or a ' .
+                            'callable.';
+
+                        throw new InvalidArgumentException($message);
+                    }
+                } else {
+                    throw new InvalidArgumentException('Protocol header config must be either a string or an array.');
+                }
+
+                continue;
+            }
+
+            if ($headerGroup !== self::FORWARDED_HEADER_GROUP_RFC) {
+                $message = 'Forwarded header group must be either an associative array or '.
+                    'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.';
+
+                throw new InvalidArgumentException($message);
+            }
+        }
+
         $new = clone $this;
         $new->forwardedHeaderGroups = $headerGroups;
         return $new;
@@ -182,24 +226,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Validate whether a given string is a valid IP address and whether it's included in given ranges (optional).
-     *
-     * You can overwrite this method in a subclass to support reverse DNS verification.
-     *
-     * @param string $value Value to validate.
-     * @param string[] $ranges The IPv4 or IPv6 ranges that are allowed or forbidden (see {@see Ip::$ranges}}.
-     *
-     * @return bool Whether the validation was successful.
-     */
-    protected function checkIp(string $value, array $ranges = []): bool
-    {
-        return $this
-            ->validator
-            ->validate($value, [new Ip(ranges: $ranges)])
-            ->isValid();
-    }
-
-    /**
      * Reverse obfuscating host data
      *
      * RFC 7239 allows using obfuscated host data. In this case, either specifying the
@@ -237,6 +263,79 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return null;
     }
 
+    private function assertNonEmpty(mixed $value, string $name): void
+    {
+        if (empty($value)) {
+            throw new InvalidArgumentException("$name can't be empty.");
+        }
+    }
+
+    private function assertExactKeysForArray(array $allowedKeys, array $array, string $name): void
+    {
+        if (array_keys($array) === $allowedKeys) {
+            return;
+        }
+
+        $allowedKeysStr = implode('", "', $allowedKeys);
+        $message = "Invalid array keys for $name. The allowed and required keys are: \"$allowedKeysStr\".";
+
+        throw new InvalidArgumentException($message);
+    }
+
+    /**
+     * @psalm-assert non-empty-string $value
+     */
+    private function assertIsNonEmptyString(mixed $value, string $name): void
+    {
+        if (!is_string($value) || $value === '') {
+            throw new InvalidArgumentException("$name must be non-empty string.");
+        }
+    }
+
+    /**
+     * @psalm-assert non-empty-string $value
+     */
+    private function assertIsHeaderName(mixed $value, string $name): void
+    {
+        $this->assertIsNonEmptyString($value, "Header name for \"$name\"");
+    }
+
+    private function assertIsAllowedProtocol(
+        mixed $value,
+        string $name,
+        string $expeptionClassName = InvalidArgumentException::class,
+    ): void
+    {
+        $this->assertIsNonEmptyString($value, $name);
+
+        if ($this->checkProtocol($value)) {
+            return;
+        }
+
+        $allowedProtocolsStr = implode('", "', self::ALLOWED_PROTOCOLS);
+        $message = "$name must be a valid protocol. Allowed values are: \"$allowedProtocolsStr\" (case-sensitive).";
+
+        throw new $expeptionClassName($message);
+    }
+
+    /**
+     * Validate whether a given string is a valid IP address and whether it's included in given ranges (optional).
+     *
+     * You can overwrite this method in a subclass to support reverse DNS verification.
+     *
+     * @param string $value Value to validate.
+     * @param string[] $ranges The IPv4 or IPv6 ranges that are allowed or forbidden (see {@see Ip::$ranges}}.
+     *
+     * @return bool Whether the validation was successful.
+     */
+    protected function checkIp(string $value, array $ranges = []): bool
+    {
+        return $this
+            ->validator
+            ->validate($value, [new Ip(ranges: $ranges)])
+            ->isValid();
+    }
+
     private function handleNotTrusted(
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
@@ -246,53 +345,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         }
 
         return $handler->handle($request->withAttribute(self::ATTRIBUTE_REQUEST_CLIENT_IP, null));
-    }
-
-    /**
-     * @psalm-return ProtocolHeadersData
-     */
-    private function prepareProtocolHeaders(array $protocolHeaders): array
-    {
-        $output = [];
-
-        foreach ($protocolHeaders as $header => $protocolAndAcceptedValues) {
-            if (!is_string($header)) {
-                throw new InvalidArgumentException('The protocol header array key must be a string.');
-            }
-
-            $header = strtolower($header);
-
-            if (is_callable($protocolAndAcceptedValues)) {
-                $protocolAndAcceptedValues = $protocolAndAcceptedValues();
-            }
-
-            if (!is_array($protocolAndAcceptedValues)) {
-                throw new InvalidArgumentException(
-                    'Accepted values for protocol headers must be either an array or a callable returning array.',
-                );
-            }
-
-            if (empty($protocolAndAcceptedValues)) {
-                throw new InvalidArgumentException('Accepted values for protocol headers cannot be an empty array.');
-            }
-
-            $output[$header] = [];
-
-            /** @psalm-var array<string|string[]> $protocolAndAcceptedValues */
-            foreach ($protocolAndAcceptedValues as $protocol => $acceptedValues) {
-                if (!is_string($protocol)) {
-                    throw new InvalidArgumentException('The protocol must be a string.');
-                }
-
-                if ($protocol === '') {
-                    throw new InvalidArgumentException('The protocol must be non-empty string.');
-                }
-
-                $output[$header][$protocol] = (array) $acceptedValues;
-            }
-        }
-
-        return $output;
     }
 
     /**
@@ -440,23 +492,35 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $proxies;
     }
 
-    private function getProtocol(ServerRequestInterface $request, string|array $configValue): ?string
+    private function getProtocol(ServerRequestInterface $request, string|array|callable $configValue): ?string
     {
         if (is_string($configValue)) {
             return $request->getHeaderLine($configValue) ?: null;
         }
 
         $headerName = $configValue[0];
-        $protocol = $request->getHeaderLine($headerName);
-        if ($protocol === '') {
+        $initialProtocol = $request->getHeaderLine($headerName);
+        if ($initialProtocol === '') {
             return null;
         }
 
-        // TODO: Support case-insensitive mapping?
-        $protocol = $configValue[1][$protocol] ?? null;
-        if ($protocol === null) {
-            // TODO: Make exception message more helpful.
-            throw new RuntimeException('Unable to resolve protocol via mapping.');
+        if (is_array($configValue[1])) {
+            $protocol = $configValue[1][$initialProtocol] ?? null;
+            if ($protocol === null) {
+                throw new RuntimeException("Unable to resolve \"$protocol\" protocol via mapping.");
+            }
+        } else {
+            $resolveProtocolCallable = $configValue[1];
+            $protocol = $resolveProtocolCallable($initialProtocol);
+            if ($protocol === null) {
+                throw new RuntimeException("Unable to resolve \"$protocol\" protocol via callable.");
+            }
+
+            $this->assertIsAllowedProtocol(
+                $protocol,
+                'Value returned from callable for protocol header',
+                RuntimeException::class,
+            );
         }
 
         return $protocol;

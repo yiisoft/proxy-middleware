@@ -71,7 +71,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         self::FORWARDED_HEADER_GROUP_X_PREFIX,
     ];
 
-    private const ALLOWED_PROTOCOLS = ['http', 'https'];
+    private const PROTOCOL_HTTP = 'http';
+    private const PROTOCOL_HTTPS = 'https';
+    private const ALLOWED_PROTOCOLS = [self::PROTOCOL_HTTP, self::PROTOCOL_HTTPS];
 
     private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
     private array $trustedIps = [];

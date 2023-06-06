@@ -6,6 +6,6 @@ namespace Yiisoft\ProxyMiddleware\Exception;
 
 use Exception;
 
-final class InvalidProxyDataException extends Exception
+final class InvalidConnectionChainItemException extends Exception
 {
 }

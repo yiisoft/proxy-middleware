@@ -15,7 +15,7 @@ use RuntimeException;
 use Yiisoft\Http\HeaderValueHelper;
 use Yiisoft\NetworkUtilities\IpHelper;
 use Yiisoft\ProxyMiddleware\Exception\HeaderValueParseException;
-use Yiisoft\ProxyMiddleware\Exception\InvalidProxyDataException;
+use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
 use Yiisoft\ProxyMiddleware\Exception\InvalidRfcProxyItemException;
 use Yiisoft\Validator\Rule\Ip;
 use Yiisoft\Validator\ValidatorInterface;
@@ -500,23 +500,23 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             $ip = $rawItem['ip'];
             if (!$this->checkIp($ip)) {
-                throw new InvalidProxyDataException("\"$ip\" is not a valid IP address.");
+                throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP address.");
             }
 
             $protocol = $rawItem['protocol'];
             if ($protocol !== null && !$this->checkProtocol($protocol)) {
-                throw new InvalidProxyDataException("\"$protocol\" is not a valid protocol.");
+                throw new InvalidConnectionChainItemException("\"$protocol\" is not a valid protocol.");
             }
 
             $host = $rawItem['host'];
             if ($host !== null && !$this->checkHost($host)) {
-                throw new InvalidProxyDataException("\"$host\" is not a valid host.");
+                throw new InvalidConnectionChainItemException("\"$host\" is not a valid host.");
             }
 
             $port = $rawItem['port'];
             if ($port !== null) {
                 if (!$this->checkPort($port)) {
-                    throw new InvalidProxyDataException("\"$port\" is not a valid port.");
+                    throw new InvalidConnectionChainItemException("\"$port\" is not a valid port.");
                 }
 
                 $rawItem['port'] = (int) $port;

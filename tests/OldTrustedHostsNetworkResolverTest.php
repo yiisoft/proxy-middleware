@@ -46,104 +46,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
                 'expectedClientIp' => '18.18.18.18',
             ]],
 
-            // Protocol headers
-
-            'rfc7239, level 8, another host, another protocol, url, ports (string, valid, missing)' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                        'hostHeaders' => ['x-forwarded-host', 'forwarded'],
-                        'protocolHeaders' => [
-                            'forwarded' => ['http' => 'http', 'https' => 'https'],
-                            'front-end-https' => ['https' => 'on'],
-                        ],
-                        'urlHeaders' => ['x-rewrite-url'],
-                        'portHeaders' => ['x-forwarded-port', 'forwarded'],
-                        'trustedHeaders' => ['x-rewrite-url', 'x-forwarded-host', 'front-end-https', 'forwarded'],
-                    ],
-                ],
-                'headers' => [
-                    'x-rewrite-url' => ['/test?test=test'],
-                    'x-forwarded-host' => ['test.another'],
-                    'front-end-https' => ['on'],
-                    'forwarded' => ['for="9.9.9.9:abs"', 'proto=http;for="5.5.5.5:123";host=test', 'for=2.2.2.2'],
-                ],
-                'expectedClientIp' => '5.5.5.5',
-                'expectedHttpHost' => 'test.another',
-                'expectedHttpScheme' => 'http',
-                'expectedPath' => '/test',
-                'expectedQuery' => 'test=test',
-                'expectedPort' => 123,
-            ]],
-            'rfc7239, level 8, another host, another protocol, url, ports (greater than max by 1, long, min allowed)' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                        'hostHeaders' => ['x-forwarded-host', 'forwarded'],
-                        'protocolHeaders' => [
-                            'forwarded' => ['http' => 'http', 'https' => 'https'],
-                            'front-end-https' => ['https' => 'on'],
-                        ],
-                        'urlHeaders' => ['x-rewrite-url'],
-                        'portHeaders' => ['x-forwarded-port', 'forwarded'],
-                        'trustedHeaders' => ['x-rewrite-url', 'x-forwarded-host', 'front-end-https', 'forwarded'],
-                    ],
-                ],
-                'headers' => [
-                    'x-rewrite-url' => ['/test?test=test'],
-                    'x-forwarded-host' => ['test.another'],
-                    'front-end-https' => ['on'],
-                    'forwarded' => [
-                        'for="9.9.9.9:65536"',
-                        'proto=http;for="5.5.5.5:123456";host=test',
-                        'for="2.2.2.2:1"',
-                    ],
-                ],
-                'expectedClientIp' => '2.2.2.2',
-                'expectedHttpHost' => 'test.another',
-                'expectedHttpScheme' => 'https',
-                'expectedPath' => '/test',
-                'expectedQuery' => 'test=test',
-                'expectedPort' => 1,
-            ]],
-            'rfc7239, level 8, another host, another protocol, url, ports (less than min by 1, long, max allowed)' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                        'hostHeaders' => ['x-forwarded-host', 'forwarded'],
-                        'protocolHeaders' => [
-                            'forwarded' => ['http' => 'http', 'https' => 'https'],
-                            'front-end-https' => ['https' => 'on'],
-                        ],
-                        'urlHeaders' => ['x-rewrite-url'],
-                        'portHeaders' => ['x-forwarded-port', 'forwarded'],
-                        'trustedHeaders' => ['x-rewrite-url', 'x-forwarded-host', 'front-end-https', 'forwarded'],
-                    ],
-                ],
-                'headers' => [
-                    'x-rewrite-url' => ['/test?test=test'],
-                    'x-forwarded-host' => ['test.another'],
-                    'front-end-https' => ['on'],
-                    'forwarded' => [
-                        'for="9.9.9.9:0"',
-                        'proto=http;for="5.5.5.5:123456";host=test',
-                        'for="2.2.2.2:65535"',
-                    ],
-                ],
-                'expectedClientIp' => '2.2.2.2',
-                'expectedHttpHost' => 'test.another',
-                'expectedHttpScheme' => 'https',
-                'expectedPath' => '/test',
-                'expectedQuery' => 'test=test',
-                'expectedPort' => 65535,
-            ]],
-
             // Trusted headers
 
             'trusted headers' => [[
@@ -487,26 +389,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
             $validIp,
             $requestHandler->processedRequest->getAttribute(TrustedHostsNetworkResolver::REQUEST_CLIENT_IP),
         );
-    }
-
-    public function testInvalidTrustedProxy(): void
-    {
-        $middleware = $this
-            ->createTrustedHostsNetworkResolver()
-            ->withAttributeIps('resolvedIps')
-            ->withAddedTrustedHosts(
-                hosts: ['5.5.5.5', '2.2.2.2', '18.18.18.18'],
-                ipHeaders: ['x-forwarded-for'],
-            );
-        $request = $this->createRequestWithSchemaAndHeaders(
-            headers: ['x-forwarded-for' => ['9.9.9.9', 'invalid5.5.5.5', '2.2.2.2']],
-            serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-        );
-        $requestHandler = new MockRequestHandler();
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Proxy returned the invalid IP: "invalid5.5.5.5". Check its configuration.');
-        $middleware->process($request, $requestHandler);
     }
 
     public function dataInvalidIpAndForCombination(): array

@@ -487,20 +487,20 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             if ($rawItem['hiddenIp'] !== null) {
                 $ip = $this->reverseObfuscateIp($rawItem['hiddenIp'], $validatedItems, $remainingItems, $request);
                 if ($ip !== null) {
-                    $rawItem['ip'] = null;
+                    $rawItem['ip'] = $ip;
                 }
             }
 
             if ($rawItem['hiddenPort'] !== null) {
-                $ip = $this->reverseObfuscatePort($rawItem['hiddenPort'], $validatedItems, $remainingItems, $request);
-                if ($ip !== null) {
-                    $rawItem['ip'] = null;
+                $port = $this->reverseObfuscatePort($rawItem['hiddenPort'], $validatedItems, $remainingItems, $request);
+                if ($port !== null) {
+                    $rawItem['port'] = $port;
                 }
             }
 
             $ip = $rawItem['ip'];
-            if (!$this->checkIp($ip)) {
-                throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP address.");
+            if ($ip !== null && !$this->checkIp($ip)) {
+                throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP.");
             }
 
             $protocol = $rawItem['protocol'];

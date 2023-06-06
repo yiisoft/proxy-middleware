@@ -8,6 +8,7 @@ use HttpSoft\Message\ServerRequest;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Http\Status;
+use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
 use Yiisoft\ProxyMiddleware\Tests\Support\MockRequestHandler;
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
 use Yiisoft\Validator\Validator;
@@ -529,6 +530,92 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
+            'RFC header, IP related data, min allowed port' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:1";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => 'http',
+                                'host' => 'example1.com',
+                                'port' => 8081,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example2.com',
+                    'port' => 1,
+                ],
+            ],
+            'RFC header, IP related data, max allowed port' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:65535";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => 'http',
+                                'host' => 'example1.com',
+                                'port' => 8081,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example2.com',
+                    'port' => 65535,
+                ],
+            ],
         ];
     }
 
@@ -562,6 +649,94 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $this->assertSame($expectedData['protocol'] ?? 'http', $uri->getScheme());
         $this->assertSame($expectedData['host'] ?? '', $uri->getHost());
         $this->assertSame($expectedData['port'] ?? null, $uri->getPort());
+    }
+
+    public function dataInvalidConnectionChainItem(): array
+    {
+        return [
+            'IP' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', 'invalid5.5.5.5', '2.2.2.2'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"invalid5.5.5.5" is not a valid IP.',
+            ],
+            'port, contains non-digits' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:a8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"a8081" is not a valid port.',
+            ],
+            'port, greater than max by 1' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:65536";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"65536" is not a valid port.',
+            ],
+            'port, greater than max' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:123456";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"123456" is not a valid port.',
+            ],
+            'port, less than min by 1' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:0";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"0" is not a valid port.',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataInvalidConnectionChainItem
+     */
+    public function testInvalidConnectionChainItem(
+        TrustedHostsNetworkResolver $middleware,
+        ServerRequestInterface $request,
+        string $expectedExceptionMessage,
+    ): void
+    {
+        $requestHandler = new MockRequestHandler();
+
+        $this->expectException(InvalidConnectionChainItemException::class);
+        $this->expectExceptionMessage($expectedExceptionMessage);
+        $middleware->process($request, $requestHandler);
     }
 
     private function createMiddleware(): TrustedHostsNetworkResolver

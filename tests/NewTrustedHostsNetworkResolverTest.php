@@ -721,6 +721,20 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"https1" protocol is not allowed. Allowed values are: "http", "https" (case-sensitive).',
             ],
+            'host' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=_example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"_example2.com" is not a valid host',
+            ],
             'port, contains non-digits' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(

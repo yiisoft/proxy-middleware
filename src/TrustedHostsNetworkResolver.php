@@ -170,13 +170,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * Returns a new instance with the specified request's attribute name to which middleware writes trusted path data.
      *
      * @param string|null $attribute The request attribute name.
-     *
-     * @see parseProxiesFromRfcHeader()
      */
     public function withConnectionChainItemsAttribute(?string $attribute): self
     {
         if ($attribute === '') {
-            throw new RuntimeException('Attribute should not be empty string.');
+            throw new InvalidArgumentException('Attribute can\'t be empty string.');
         }
 
         $new = clone $this;
@@ -269,6 +267,24 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return null;
     }
 
+    /**
+     * Validate whether a given string is a valid IP address and whether it's included in given ranges (optional).
+     *
+     * You can overwrite this method in a subclass to support reverse DNS verification.
+     *
+     * @param string $value Value to validate.
+     * @param string[] $ranges The IPv4 or IPv6 ranges that are allowed or forbidden (see {@see Ip::$ranges}}.
+     *
+     * @return bool Whether the validation was successful.
+     */
+    protected function checkIp(string $value, array $ranges = []): bool
+    {
+        return $this
+            ->validator
+            ->validate($value, [new Ip(ranges: $ranges)])
+            ->isValid();
+    }
+
     private function assertNonEmpty(mixed $value, string $name): void
     {
         if (empty($value)) {
@@ -298,14 +314,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         }
     }
 
-    /**
-     * @psalm-assert non-empty-string $value
-     */
-    private function assertIsHeaderName(mixed $value, string $name): void
-    {
-        $this->assertIsNonEmptyString($value, "Header name for \"$name\"");
-    }
-
     private function assertIsAllowedProtocol(
         mixed $value,
         string $name,
@@ -322,24 +330,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         $message = "$name must be a valid protocol. Allowed values are: \"$allowedProtocolsStr\" (case-sensitive).";
 
         throw new $expeptionClassName($message);
-    }
-
-    /**
-     * Validate whether a given string is a valid IP address and whether it's included in given ranges (optional).
-     *
-     * You can overwrite this method in a subclass to support reverse DNS verification.
-     *
-     * @param string $value Value to validate.
-     * @param string[] $ranges The IPv4 or IPv6 ranges that are allowed or forbidden (see {@see Ip::$ranges}}.
-     *
-     * @return bool Whether the validation was successful.
-     */
-    protected function checkIp(string $value, array $ranges = []): bool
-    {
-        return $this
-            ->validator
-            ->validate($value, [new Ip(ranges: $ranges)])
-            ->isValid();
     }
 
     private function handleNotTrusted(

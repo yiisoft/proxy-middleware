@@ -16,7 +16,7 @@ use Yiisoft\Validator\Validator;
 
 final class NewTrustedHostsNetworkResolverTest extends TestCase
 {
-    public function dataWithTrustedIps(): array
+    public function dataWithTrustedIpsException(): array
     {
         return [
             'empty' => [
@@ -31,9 +31,9 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
     }
 
     /**
-     * @dataProvider dataWithTrustedIps
+     * @dataProvider dataWithTrustedIpsException
      */
-    public function testWithTrustedIps(array $trustedIps, string $expectedExceptionMessage): void
+    public function testWithTrustedIpsException(array $trustedIps, string $expectedExceptionMessage): void
     {
         $middleware = $this->createMiddleware();
 
@@ -341,7 +341,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $middleware->withForwardedHeaderGroups($forwardedHeaderGroups);
     }
 
-    public function dataWithTypicalForwardedHeaders(): array
+    public function dataWithTypicalForwardedHeadersException(): array
     {
         return [
             'empty' => [
@@ -368,9 +368,9 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
     }
 
     /**
-     * @dataProvider dataWithTypicalForwardedHeaders
+     * @dataProvider dataWithTypicalForwardedHeadersException
      */
-    public function testWithTypicalForwardedHeaders(
+    public function testWithTypicalForwardedHeadersException(
         array $typicalForwardedHeaders,
         string $expectedExceptionMessage,
     ): void
@@ -380,6 +380,15 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage($expectedExceptionMessage);
         $middleware->withTypicalForwardedHeaders($typicalForwardedHeaders);
+    }
+
+    public function testWithConnectionChainItemsAttributeException(): void
+    {
+        $middleware = $this->createMiddleware();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Attribute can\'t be empty string');
+        $middleware->withConnectionChainItemsAttribute('');
     }
 
     public function testImmutability(): void
@@ -395,11 +404,23 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             $middleware,
             $middleware->withTypicalForwardedHeaders([TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC]),
         );
+        $this->assertNotSame($middleware, $middleware->withConnectionChainItemsAttribute('connectionChainItems'));
     }
 
     public function dataProcess(): array
     {
         return [
+            'neither remote addr, nor forwarded headers are set' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(),
+                [
+                    'requestClientIp' => null,
+                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                ],
+            ],
             'remote addr not set' => [
                 $this
                     ->createMiddleware()
@@ -407,6 +428,19 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
+                ),
+                [
+                    'requestClientIp' => null,
+                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                ],
+            ],
+            'forwarded headers not set' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
                     'requestClientIp' => null,

@@ -110,47 +110,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
         $this->assertSame($expectedQuery, $requestHandler->processedRequest->getUri()->getQuery());
     }
 
-    public function dataProcessNotTrusted(): array
-    {
-        return [
-            'none' => [
-                [],
-                [],
-            ],
-            'x-forwarded-for' => [
-                ['x-forwarded-for' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
-                ['hosts' => ['8.8.8.8'], 'ipHeaders' => ['x-forwarded-for']],
-            ],
-            'rfc7239' => [
-                ['x-forwarded-for' => ['for=9.9.9.9', 'for=5.5.5.5', 'for=2.2.2.2']],
-                ['hosts' => ['8.8.8.8'], 'ipHeaders' => ['x-forwarded-for']],
-            ],
-        ];
-    }
-
-    /**
-     * @dataProvider dataProcessNotTrusted
-     */
-    public function testProcessNotTrusted(array $headers, array $trustedHostsData): void
-    {
-        $middleware = $this->createTrustedHostsNetworkResolver();
-
-        if ($trustedHostsData !== []) {
-            $middleware = $middleware->withAddedTrustedHosts(...$trustedHostsData);
-        }
-
-        $request = $this->createRequestWithSchemaAndHeaders(
-            headers: $headers,
-            serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-        );
-        $requestHandler = new MockRequestHandler();
-
-        $middleware->process($request, $requestHandler);
-        $this->assertNull(
-            $requestHandler->processedRequest->getAttribute(TrustedHostsNetworkResolver::REQUEST_CLIENT_IP)
-        );
-    }
-
     public function testProcessWithAttributeIpsAndWithoutActualHost(): void
     {
         $request = $this->createRequestWithSchemaAndHeaders();
@@ -164,13 +123,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
         $this->assertSame('', $requestHandler->processedRequest->getUri()->getHost());
         $this->assertNull($requestHandler->processedRequest->getAttribute('ip', 'default'));
         $this->assertNull($requestHandler->processedRequest->getAttribute('requestClientIp', 'default'));
-    }
-
-    public function testWithAttributeIpsAndEmptyString(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Attribute should not be empty string.');
-        $this->createTrustedHostsNetworkResolver()->withAttributeIps('');
     }
 
     public function dataValidIpAndForCombination(): array

@@ -16,6 +16,32 @@ use Yiisoft\Validator\Validator;
 
 final class NewTrustedHostsNetworkResolverTest extends TestCase
 {
+    public function dataWithTrustedIps(): array
+    {
+        return [
+            'empty' => [
+                [],
+                'Trusted IPs can\'t be empty.',
+            ],
+            'contains invalid IP' => [
+                ['8.8.8.8', 'invalid2.2.2.2', '18.18.18.18'],
+                '"invalid2.2.2.2" is not a valid IP.',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataWithTrustedIps
+     */
+    public function testWithTrustedIps(array $trustedIps, string $expectedExceptionMessage): void
+    {
+        $middleware = $this->createMiddleware();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($expectedExceptionMessage);
+        $middleware->withTrustedIps($trustedIps);
+    }
+
     public function dataWithForwardedHeaderGroupsException(): array
     {
         return [
@@ -313,6 +339,17 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage($expectedExceptionMessage);
         $middleware->withForwardedHeaderGroups($forwardedHeaderGroups);
+    }
+
+    public function testImmutability(): void
+    {
+        $middleware = $this->createMiddleware();
+
+        $this->assertNotSame($middleware, $middleware->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']));
+        $this->assertNotSame(
+            $middleware,
+            $middleware->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC]),
+        );
     }
 
     public function dataProcess(): array

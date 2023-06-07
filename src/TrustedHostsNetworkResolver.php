@@ -38,10 +38,18 @@ use Yiisoft\Validator\ValidatorInterface;
  */
 class TrustedHostsNetworkResolver implements MiddlewareInterface
 {
-    /**
-     * Name of the request attribute holding IP address obtained from a trusted header.
-     */
-    public const ATTRIBUTE_REQUEST_CLIENT_IP = 'requestClientIp';
+    public const FORWARDED_HEADER_RFC = 'forwarded';
+    public const FORWARDED_HEADER_GROUP_RFC = self::FORWARDED_HEADER_RFC;
+    public const FORWARDED_HEADER_GROUP_X_PREFIX = [
+        'ip' => 'x-forwarded-for',
+        'protocol' => 'x-forwarded-proto',
+        'host' => 'x-forwarded-host',
+        'port' => 'x-forwarded-port',
+    ];
+    public const DEFAULT_FORWARDED_HEADER_GROUPS = [
+        self::FORWARDED_HEADER_GROUP_RFC,
+        self::FORWARDED_HEADER_GROUP_X_PREFIX,
+    ];
     /**
      * List of headers to trust for any trusted host.
      */
@@ -58,26 +66,18 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         // Microsoft
         'front-end-https',
     ];
-    public const FORWARDED_HEADER_RFC = 'forwarded';
-    public const FORWARDED_HEADER_GROUP_RFC = self::FORWARDED_HEADER_RFC;
-    public const FORWARDED_HEADER_GROUP_X_PREFIX = [
-        'ip' => 'x-forwarded-for',
-        'protocol' => 'x-forwarded-proto',
-        'host' => 'x-forwarded-host',
-        'port' => 'x-forwarded-port',
-    ];
-    public const DEFAULT_FORWARDED_HEADER_GROUPS = [
-        self::FORWARDED_HEADER_GROUP_RFC,
-        self::FORWARDED_HEADER_GROUP_X_PREFIX,
-    ];
+    /**
+     * Name of the request attribute holding IP address obtained from a trusted header.
+     */
+    public const ATTRIBUTE_REQUEST_CLIENT_IP = 'requestClientIp';
 
     private const PROTOCOL_HTTP = 'http';
     private const PROTOCOL_HTTPS = 'https';
     private const ALLOWED_PROTOCOLS = [self::PROTOCOL_HTTP, self::PROTOCOL_HTTPS];
 
-    private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
     private array $trustedIps = [];
     private array $forwardedHeaderGroups = self::DEFAULT_FORWARDED_HEADER_GROUPS;
+    private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
     private ?string $connectionChainItemsAttribute = null;
 
     public function __construct(private ValidatorInterface $validator)
@@ -110,7 +110,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $this->assertExactKeysForArray($allowedHeaderGroupKeys, $headerGroup, 'forwarded header group');
 
                 foreach (['ip', 'host', 'port'] as $key) {
-                    $this->assertIsHeaderName($headerGroup[$key], $key);
+                    $this->assertIsNonEmptyString($headerGroup[$key], "Header name for \"$key\"");
                 }
 
                 if (is_string($headerGroup['protocol'])) {
@@ -118,7 +118,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 } elseif (is_array($headerGroup['protocol'])) {
                     $this->assertNonEmpty($headerGroup['protocol'], 'Protocol header config array');
                     $this->assertExactKeysForArray([0, 1], $headerGroup['protocol'], 'protocol header config');
-                    $this->assertIsHeaderName($headerGroup['protocol'][0], 'protocol');
+                    $this->assertIsNonEmptyString($headerGroup['protocol'][0], 'Header name for "protocol"');
 
                     if (is_array($headerGroup['protocol'][1])) {
                         $this->assertNonEmpty($headerGroup['protocol'][1], 'Values in mapping for protocol header');
@@ -155,6 +155,12 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
     public function withTypicalForwardedHeaders(array $headerNames): self
     {
+        $this->assertNonEmpty($headerNames, 'Typical forwarded headers');
+
+        foreach ($headerNames as $headerName) {
+            $this->assertIsNonEmptyString($headerName, 'Typical forwarded header');
+        }
+
         $new = clone $this;
         $new->typicalForwardedHeaders = $headerNames;
         return $new;

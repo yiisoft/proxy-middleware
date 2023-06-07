@@ -341,6 +341,47 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $middleware->withForwardedHeaderGroups($forwardedHeaderGroups);
     }
 
+    public function dataWithTypicalForwardedHeaders(): array
+    {
+        return [
+            'empty' => [
+                [],
+                'Typical forwarded headers can\'t be empty.',
+            ],
+            'contains invalid header, not a string' => [
+                [
+                    'forwarded',
+                    1,
+                    'front-end-https',
+                ],
+                'Typical forwarded header must be non-empty string.',
+            ],
+            'contains invalid header, empty string' => [
+                [
+                    'forwarded',
+                    '',
+                    'front-end-https',
+                ],
+                'Typical forwarded header must be non-empty string.',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataWithTypicalForwardedHeaders
+     */
+    public function testWithTypicalForwardedHeaders(
+        array $typicalForwardedHeaders,
+        string $expectedExceptionMessage,
+    ): void
+    {
+        $middleware = $this->createMiddleware();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($expectedExceptionMessage);
+        $middleware->withTypicalForwardedHeaders($typicalForwardedHeaders);
+    }
+
     public function testImmutability(): void
     {
         $middleware = $this->createMiddleware();
@@ -349,6 +390,10 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $this->assertNotSame(
             $middleware,
             $middleware->withForwardedHeaderGroups([TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC]),
+        );
+        $this->assertNotSame(
+            $middleware,
+            $middleware->withTypicalForwardedHeaders([TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC]),
         );
     }
 

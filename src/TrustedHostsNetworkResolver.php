@@ -75,6 +75,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     private const PROTOCOL_HTTPS = 'https';
     private const ALLOWED_PROTOCOLS = [self::PROTOCOL_HTTP, self::PROTOCOL_HTTPS];
 
+    private const PORT_MIN = 1;
+    private const PORT_MAX = 65535;
+
     private array $trustedIps = [];
     private array $forwardedHeaderGroups = self::DEFAULT_FORWARDED_HEADER_GROUPS;
     private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
@@ -418,22 +421,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Forwarded elements by RFC7239.
-     *
-     * The structure of the elements:
-     * - `host`: IP or obfuscated hostname or "unknown"
-     * - `ip`: IP address (only if present)
-     * - `port`: port number received by proxy (only if present)
-     * - `protocol`: protocol received by proxy (only if present)
-     * - `host`: HTTP host received by proxy (only if present)
-     *
-     * The list starts with the server, and the last item is the client itself.
-     *
      * @link https://tools.ietf.org/html/rfc7239
-     *
-     * @param string[] $proxyItems
-     *
-     * @psalm-return list<HostData> Proxy data elements.
      */
     private function parseProxiesFromRfcHeader(array $proxyItems): array
     {
@@ -460,37 +448,34 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             // TODO: Should port be parsed from host instead?
             // TODO: Matches contains empty strings.
-            $pattern = '/^(?<ip>' . IpHelper::IPV4_PATTERN . '|unknown|_[\w.-]+|' .
-                '[[]' . IpHelper::IPV6_PATTERN . '[]])(?::(?<port>[\w.-]+))?$/';
+            // TODO: Use heredoc syntax.
+            $pattern = '/^' .
+                '(?:' .
+                    '(?<ip>' . IpHelper::IPV4_PATTERN .'|[[]' . IpHelper::IPV6_PATTERN . '[]])' .
+                    '|' .
+                    '(?<hiddenIp>unknown|_[\w.-]+)' .
+                ')' .
+                '(?:' .
+                    ':' .
+                    '(?<port>\d{1,5}+)' .
+                    '|' .
+                    '(?<hiddenPort>[\w.-]+)' .
+                ')?' .
+                '$/';
             if (preg_match($pattern, $directiveMap['for'], $matches) === 0) {
                 throw new InvalidRfcProxyItemException();
             }
 
-            $ip = $matches['ip'];
-            $protocol = $directiveMap['proto'] ?? null;
-            $host = $directiveMap['host'] ?? null;
-            $port = $matches['port'] ?? null;
-
-            if ($ip === 'unknown' || str_starts_with($ip, '_')) {
-                $proxies[] = [
-                    'ip' => null,
-                    'protocol' => $protocol,
-                    'host' => $host,
-                    'port' => null,
-                    'hiddenIp' => $ip,
-                    'hiddenPort' => $port,
-                ];
-
-                continue;
-            }
-
+            $ip = $matches['ip'] ?? null;
+            $hiddenIp = $matches['hiddenIp'] ?? null;
+            $hiddenPort = $matches['hiddenPort'] ?? null;
             $proxies[] = [
-                'ip' => $ip,
-                'protocol' => $protocol,
-                'host' => $host,
-                'port' => $port,
-                'hiddenIp' => null,
-                'hiddenPort' => null,
+                'ip' => $ip ?: null,
+                'protocol' => $directiveMap['proto'] ?? null,
+                'host' => $directiveMap['host'] ?? null,
+                'port' => isset($matches['port']) ? (int) $matches['port'] : null,
+                'hiddenIp' => $hiddenIp ?: null,
+                'hiddenPort' => $hiddenPort ?: null,
             ];
         }
 
@@ -546,6 +531,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             $rawItem = array_shift($remainingItems);
             if ($rawItem['hiddenIp'] !== null) {
+                if ($rawItem['hiddenIp'] === 'unknown') {
+                    break;
+                }
+
                 $ip = $this->reverseObfuscateIp($rawItem['hiddenIp'], $validatedItems, $remainingItems, $request);
                 if ($ip !== null) {
                     $rawItem['ip'] = $ip;
@@ -581,17 +570,21 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             $port = $rawItem['port'];
             if ($port !== null) {
                 if (!$this->checkPort($port)) {
-                    throw new InvalidConnectionChainItemException("\"$port\" is not a valid port.");
+                    $portMin = self::PORT_MIN;
+                    $portMax = self::PORT_MAX;
+                    $message = "\"$port\" is not a valid port. Port must be a number between $portMin and $portMax.";
+
+                    throw new InvalidConnectionChainItemException($message);
                 }
 
                 $rawItem['port'] = (int) $port;
             }
 
-            if ($proxiesCount >= 3) {
+            if ($proxiesCount >= 3 && $ip !== null) {
                 $item = $rawItem;
             }
 
-            if (!$this->checkTrustedIp($ip)) {
+            if ($ip === null || !$this->checkTrustedIp($ip)) {
                 break;
             }
 
@@ -625,20 +618,22 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
     }
 
-    private function checkPort(string $port): bool
+    private function checkPort(string|int $port): bool
     {
-        /**
-         * @infection-ignore-all
-         * - PregMatchRemoveCaret.
-         * - PregMatchRemoveDollar.
-         */
-        if (preg_match('/^\d{1,5}$/', $port) !== 1) {
-            return false;
+        if (is_string($port)) {
+            /**
+             * @infection-ignore-all
+             * - PregMatchRemoveCaret.
+             * - PregMatchRemoveDollar.
+             */
+            if (preg_match('/^\d{1,5}$/', $port) !== 1) {
+                return false;
+            }
+
+            /** @infection-ignore-all CastInt */
+            $port = (int) $port;
         }
 
-        /** @infection-ignore-all CastInt */
-        $intPort = (int) $port;
-
-        return $intPort >= 1 && $intPort <= 65535;
+        return $port >= self::PORT_MIN && $port <= self::PORT_MAX;
     }
 }

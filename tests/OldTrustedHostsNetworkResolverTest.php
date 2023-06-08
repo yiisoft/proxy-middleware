@@ -23,17 +23,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
     public function dataProcessTrusted(): array
     {
         return [
-            'rfc7239, level 2, obfuscated host, unknown' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                    ],
-                ],
-                'headers' => ['forwarded' => ['for=unknown', 'to=unknown']],
-                'expectedClientIp' => '18.18.18.18',
-            ]],
             'rfc7239, level 2, obfuscated host, unknown, with port' => [[
                 'remoteAddr' => '18.18.18.18',
                 'trustedHosts' => [
@@ -175,26 +164,5 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
         };
         $this->assertFalse($middleware->checkIp('5.5.5.5'));
         $this->assertTrue($middleware->checkIp('2.2.2.2'));
-    }
-
-    private function createCustomTrustedHostsNetworkResolver(string $remoteAddr): TrustedHostsNetworkResolver
-    {
-        return new class ($remoteAddr) extends TrustedHostsNetworkResolver {
-            public function __construct(
-                private string $remoteAddr,
-            )
-            {
-                parent::__construct(new Validator());
-            }
-
-            protected function reverseObfuscateHostData(
-                ?array $proxy,
-                array $validatedProxies,
-                array $remainingProxies,
-                RequestInterface $request
-            ): ?array {
-                return $proxy['host'] === 'unknown' ? ['ip' => $this->remoteAddr] : $proxy;
-            }
-        };
     }
 }

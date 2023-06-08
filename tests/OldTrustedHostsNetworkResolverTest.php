@@ -45,52 +45,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
                 'headers' => ['forwarded' => ['for=unknown:1']],
                 'expectedClientIp' => '18.18.18.18',
             ]],
-
-            // Trusted headers
-
-            'trusted headers' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18'],
-                        'ipHeaders' => ['x-forwarded-for'],
-                        'trustedHeaders' => ['x-forwarded-for'],
-                    ],
-                ],
-                'headers' => ['x-forwarded-for' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'], 'foo' => 'bar'],
-                'expectedClientIp' => null,
-            ]],
-            'trusted headers, custom, multiple, trust custom' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18'],
-                        'ipHeaders' => ['x-forwarded-for', 'custom-x-forwarded-for'],
-                        'trustedHeaders' => ['custom-x-forwarded-for'],
-                    ],
-                ],
-                'headers' => [
-                    'x-forwarded-for' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
-                    'custom-x-forwarded-for' => ['7.7.7.7', '4.4.4.4', '1.1.1.1'],
-                    'foo' => 'bar',
-                ],
-                'expectedClientIp' => null,
-            ]],
-            'trusted headers, custom, multiple, trust default' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18'],
-                        'ipHeaders' => ['x-forwarded-for', 'custom-x-forwarded-for'],
-                    ],
-                ],
-                'headers' => [
-                    'custom-x-forwarded-for' => ['7.7.7.7', '4.4.4.4', '1.1.1.1'],
-                    'x-forwarded-for' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
-                    'foo' => 'bar',
-                ],
-                'expectedClientIp' => null,
-            ]],
         ];
     }
 

@@ -8,6 +8,7 @@ use HttpSoft\Message\ServerRequest;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
+use RuntimeException;
 use Yiisoft\Http\Status;
 use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
 use Yiisoft\ProxyMiddleware\Tests\Support\MockRequestHandler;
@@ -645,12 +646,40 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
+            'remote addr is empty' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
+                    serverParams: ['REMOTE_ADDR' => ''],
+                ),
+                [
+                    'requestClientIp' => null,
+                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                ],
+            ],
             'forwarded headers not set' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => null,
+                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                ],
+            ],
+            'forwarded headers are empty' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: ['X-Forwarded-For' => ''],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
@@ -1157,6 +1186,105 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
+            'custom headers, IP related data, protocol mapping, protocol header not set' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => ['front-end-https', ['On' => 'https']],
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Y-Forwarded-Host' => ['example.com'],
+                        'Y-Forwarded-Port' => ['8080'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => 'example.com',
+                                'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => null,
+                                'host' => 'example.com',
+                                'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'http',
+                    'host' => 'example.com',
+                    'port' => 8080,
+                ],
+            ],
+            'custom headers, IP related data, protocol mapping, protocol header is empty' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => ['front-end-https', ['On' => 'https']],
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Front-End-Https' => '',
+                        'Y-Forwarded-Host' => ['example.com'],
+                        'Y-Forwarded-Port' => ['8080'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => 'example.com',
+                                'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => null,
+                                'host' => 'example.com',
+                                'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'http',
+                    'host' => 'example.com',
+                    'port' => 8080,
+                ],
+            ],
             'custom headers, IP related data, protocol resolving via callable' => [
                 $this
                     ->createMiddleware()
@@ -1166,7 +1294,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                             'ip' => 'y-forwarded-for',
                             'protocol' => [
                                 'front-end-https',
-                                static fn (string $protocol): string => $protocol === 'On' ? 'https': 'http',
+                                static fn (string $protocol): ?string => $protocol === 'On' ? 'https': 'http',
                             ],
                             'host' => 'y-forwarded-host',
                             'port' => 'y-forwarded-port',
@@ -1486,6 +1614,60 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $requestHandler = new MockRequestHandler();
 
         $this->expectException(InvalidConnectionChainItemException::class);
+        $this->expectExceptionMessage($expectedExceptionMessage);
+        $middleware->process($request, $requestHandler);
+    }
+
+    public function dataGetProtocolException(): array
+    {
+        return [
+            'mapping, no matching item' => [
+                ['Test' => 'https'],
+                'Unable to resolve "On" protocol via mapping.',
+            ],
+            'callable, return value is null' => [
+                static fn (string $protocol): ?string => null,
+                'Unable to resolve "On" protocol via callable.',
+            ],
+            'callable, return value is not a valid protocol' => [
+                static fn (string $protocol): ?string => 'test',
+                'Value returned from callable for protocol header must be a valid protocol. Allowed values are: ' .
+                '"http", "https" (case-sensitive).',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataGetProtocolException
+     */
+    public function testGetProtocolException(array|callable $protocolResolvingConfig, string $expectedExceptionMessage): void
+    {
+        $middleware = $this
+            ->createMiddleware()
+            ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+            ->withForwardedHeaderGroups([
+                [
+                    'ip' => 'y-forwarded-for',
+                    'protocol' => [
+                        'front-end-https',
+                        $protocolResolvingConfig,
+                    ],
+                    'host' => 'y-forwarded-host',
+                    'port' => 'y-forwarded-port',
+                ],
+            ]);
+        $request = $this->createRequest(
+            headers: [
+                'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                'Front-End-Https' => ['On'],
+                'Y-Forwarded-Host' => ['example.com'],
+                'Y-Forwarded-Port' => ['8080'],
+            ],
+            serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+        );
+        $requestHandler = new MockRequestHandler();
+
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage($expectedExceptionMessage);
         $middleware->process($request, $requestHandler);
     }

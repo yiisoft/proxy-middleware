@@ -191,7 +191,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
         /** @var string|null $remoteAddr */
         $remoteAddr = $request->getServerParams()['REMOTE_ADDR'] ?? null;
-        if ($remoteAddr === null) {
+        if (empty($remoteAddr)) {
             return $this->handleNotTrusted($request, $handler);
         }
 
@@ -512,13 +512,13 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         if (is_array($configValue[1])) {
             $protocol = $configValue[1][$initialProtocol] ?? null;
             if ($protocol === null) {
-                throw new RuntimeException("Unable to resolve \"$protocol\" protocol via mapping.");
+                throw new RuntimeException("Unable to resolve \"$initialProtocol\" protocol via mapping.");
             }
         } else {
             $resolveProtocolCallable = $configValue[1];
             $protocol = $resolveProtocolCallable($initialProtocol);
             if ($protocol === null) {
-                throw new RuntimeException("Unable to resolve \"$protocol\" protocol via callable.");
+                throw new RuntimeException("Unable to resolve \"$initialProtocol\" protocol via callable.");
             }
 
             $this->assertIsAllowedProtocol(

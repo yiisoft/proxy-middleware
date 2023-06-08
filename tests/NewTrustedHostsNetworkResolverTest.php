@@ -1157,6 +1157,59 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
+            'custom headers, IP related data, protocol resolving via callable' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => [
+                                'front-end-https',
+                                static fn (string $protocol): string => $protocol === 'On' ? 'https': 'http',
+                            ],
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Front-End-Https' => ['On'],
+                        'Y-Forwarded-Host' => ['example.com'],
+                        'Y-Forwarded-Port' => ['8080'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => 'https',
+                                'host' => 'example.com',
+                                'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => 'https',
+                                'host' => 'example.com',
+                                'port' => 8080,
+                                'hiddenIp' => null,
+                                'hiddenPort' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example.com',
+                    'port' => 8080,
+                ],
+            ],
             'RFC header, IP related data, case-insensitive protocol' => [
                 $this
                     ->createMiddleware()

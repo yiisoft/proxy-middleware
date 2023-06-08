@@ -278,24 +278,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return null;
     }
 
-    /**
-     * Validate whether a given string is a valid IP address and whether it's included in given ranges (optional).
-     *
-     * You can overwrite this method in a subclass to support reverse DNS verification.
-     *
-     * @param string $value Value to validate.
-     * @param string[] $ranges The IPv4 or IPv6 ranges that are allowed or forbidden (see {@see Ip::$ranges}}.
-     *
-     * @return bool Whether the validation was successful.
-     */
-    protected function checkIp(string $value, array $ranges = []): bool
-    {
-        return $this
-            ->validator
-            ->validate($value, [new Ip(ranges: $ranges)])
-            ->isValid();
-    }
-
     private function assertNonEmpty(mixed $value, string $name): void
     {
         if (empty($value)) {
@@ -609,7 +591,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $item = $rawItem;
             }
 
-            if (!$this->checkIp($ip, $this->trustedIps)) {
+            if (!$this->checkTrustedIp($ip)) {
                 break;
             }
 
@@ -618,6 +600,19 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         } while (count($remainingItems) > 0);
 
         return $item;
+    }
+
+    public function checkIp(string $value): bool
+    {
+        return $this
+            ->validator
+            ->validate($value, [new Ip()])
+            ->isValid();
+    }
+
+    public function checkTrustedIp(string $value): bool
+    {
+        return (new Ip(ranges: $this->trustedIps))->isAllowed($value);
     }
 
     private function checkProtocol(string $protocol): bool

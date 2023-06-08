@@ -407,6 +407,217 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $this->assertNotSame($middleware, $middleware->withConnectionChainItemsAttribute('connectionChainItems'));
     }
 
+    public function dataWithTypicalForwardedHeaders(): array
+    {
+        return [
+            'default' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => 'y-forwarded-proto',
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                        TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
+                    ]),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8013";proto=http;host=example13.com',
+                            'for="8.8.8.8:8012";proto=http;host=example12.com',
+                            'for="2.2.2.2:8011";proto=http;host=example11.com',
+                        ],
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '1.1.1.1'],
+                        'X-Forwarded-Proto' => ['http'],
+                        'X-Forwarded-Host' => ['example2.com'],
+                        'X-Forwarded-Port' => ['8020'],
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Y-Forwarded-Proto' => ['https'],
+                        'Y-Forwarded-Host' => ['example3.com'],
+                        'Y-Forwarded-Port' => ['8030'],
+                        'Front-End-Https' => 'On',
+                        'Non-Forwarded' => 'test',
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'removedHeaders' => [
+                        'X-Forwarded-For',
+                        'X-Forwarded-Proto',
+                        'X-Forwarded-Host',
+                        'X-Forwarded-Port',
+                        'Front-End-Https',
+                    ],
+                    'remainedHeaders' => [
+                        'Forwarded',
+                        'Y-Forwarded-For',
+                        'Y-Forwarded-Proto',
+                        'Y-Forwarded-Host',
+                        'Y-Forwarded-Port',
+                        'Non-Forwarded',
+                    ],
+                ],
+            ],
+            'custom, case-insensitive' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'X-FORWARDED-FOR',
+                            'protocol' => 'X-FORWARDED-PROTO',
+                            'host' => 'X-FORWARDED-HOST',
+                            'port' => 'X-FORWARDED-PORT',
+                        ],
+                        TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
+                    ])
+                    ->withTypicalForwardedHeaders([
+                        strtoupper(TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC),
+                        'X-Forwarded-For',
+                        'X-Forwarded-Proto',
+                        'X-Forwarded-Host',
+                        'X-Forwarded-Port',
+                        'Front-End-Https',
+                    ]),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8013";proto=http;host=example13.com',
+                            'for="8.8.8.8:8012";proto=http;host=example12.com',
+                            'for="2.2.2.2:8011";proto=http;host=example11.com',
+                        ],
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '1.1.1.1'],
+                        'X-Forwarded-Proto' => ['http'],
+                        'X-Forwarded-Host' => ['example2.com'],
+                        'X-Forwarded-Port' => ['8020'],
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Y-Forwarded-Proto' => ['https'],
+                        'Y-Forwarded-Host' => ['example3.com'],
+                        'Y-Forwarded-Port' => ['8030'],
+                        'Front-End-Https' => 'On',
+                        'Non-Forwarded' => 'test',
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '18.18.18.18',
+                    'removedHeaders' => [
+                        'Front-End-Https',
+                    ],
+                    'remainedHeaders' => [
+                        'Forwarded',
+                        'X-Forwarded-For',
+                        'X-Forwarded-Proto',
+                        'X-Forwarded-Host',
+                        'X-Forwarded-Port',
+                        'Y-Forwarded-For',
+                        'Y-Forwarded-Proto',
+                        'Y-Forwarded-Host',
+                        'Y-Forwarded-Port',
+                        'Non-Forwarded',
+                    ],
+                ],
+            ],
+            'custom, case-insensitive, protocol array' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'Y-FORWARDED-FOR',
+                            'protocol' => [
+                                'FRONT-END-HTTPS',
+                                ['On' => 'https'],
+                            ],
+                            'host' => 'Y-FORWARDED-HOST',
+                            'port' => 'Y-FORWARDED-PORT',
+                        ],
+                        TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
+                    ])
+                    ->withTypicalForwardedHeaders([
+                        strtoupper(TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC),
+                        'Y-Forwarded-For',
+                        'Y-Forwarded-Proto',
+                        'Y-Forwarded-Host',
+                        'Y-Forwarded-Port',
+                        'Front-End-Https',
+                    ]),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8013";proto=http;host=example13.com',
+                            'for="8.8.8.8:8012";proto=http;host=example12.com',
+                            'for="2.2.2.2:8011";proto=http;host=example11.com',
+                        ],
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '1.1.1.1'],
+                        'X-Forwarded-Proto' => ['http'],
+                        'X-Forwarded-Host' => ['example2.com'],
+                        'X-Forwarded-Port' => ['8020'],
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Y-Forwarded-Proto' => ['https'],
+                        'Y-Forwarded-Host' => ['example3.com'],
+                        'Y-Forwarded-Port' => ['8030'],
+                        'Front-End-Https' => 'On',
+                        'Non-Forwarded' => 'test',
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'removedHeaders' => [
+                        'Y-Forwarded-Proto',
+                    ],
+                    'remainedHeaders' => [
+                        'Forwarded',
+                        'X-Forwarded-For',
+                        'X-Forwarded-Proto',
+                        'X-Forwarded-Host',
+                        'X-Forwarded-Port',
+                        'Y-Forwarded-For',
+                        'Y-Forwarded-Host',
+                        'Y-Forwarded-Port',
+                        'Front-End-Https',
+                        'Non-Forwarded',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataWithTypicalForwardedHeaders
+     */
+    public function testWithTypicalForwardedHeaders(
+        TrustedHostsNetworkResolver $middleware,
+        ServerRequestInterface $request,
+        array $expectedData,
+    ): void
+    {
+        $requestHandler = new MockRequestHandler();
+
+        $response = $middleware->process($request, $requestHandler);
+        $this->assertSame(Status::OK, $response->getStatusCode());
+
+        $processedRequest = $requestHandler->processedRequest;
+
+        $this->assertSame(
+            $expectedData['requestClientIp'],
+            $processedRequest->getAttribute(TrustedHostsNetworkResolver::ATTRIBUTE_REQUEST_CLIENT_IP),
+        );
+
+        foreach ($expectedData['removedHeaders'] as $header) {
+            $this->assertEmpty($processedRequest->getHeader($header));
+        }
+
+        foreach ($expectedData['remainedHeaders'] as $header) {
+            $this->assertNotEmpty($processedRequest->getHeader($header));
+        }
+    }
+
     public function dataProcess(): array
     {
         return [
@@ -709,7 +920,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ->withTrustedIps(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
-                    headers: ['X-forwarded-for' => ['9.9.9.9', '7.7.7.7', '5.5.5.5', '2.2.2.2']],
+                    headers: ['X-Forwarded-For' => ['9.9.9.9', '7.7.7.7', '5.5.5.5', '2.2.2.2']],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
@@ -853,18 +1064,18 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 $this->createRequest(
                     headers: [
                         'Forwarded' => [
-                            'for=9.9.9.9:8013;proto=http;host=example13.com',
-                            'for=8.8.8.8:8012;proto=http;host=example12.com',
-                            'for=2.2.2.2:8011;proto=http;host=example11.com',
+                            'for="9.9.9.9:8013";proto=http;host=example13.com',
+                            'for="8.8.8.8:8012";proto=http;host=example12.com',
+                            'for="2.2.2.2:8011";proto=http;host=example11.com',
                         ],
-                        'X-forwarded-For' => ['9.9.9.9', '5.5.5.5', '1.1.1.1'],
-                        'X-forwarded-Proto' => ['http'],
-                        'X-forwarded-Host' => ['example2.com'],
-                        'X-forwarded-Port' => ['8020'],
-                        'Y-forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
-                        'Y-forwarded-Proto' => ['https'],
-                        'Y-forwarded-Host' => ['example3.com'],
-                        'Y-forwarded-Port' => ['8030'],
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '1.1.1.1'],
+                        'X-Forwarded-Proto' => ['http'],
+                        'X-Forwarded-Host' => ['example2.com'],
+                        'X-Forwarded-Port' => ['8020'],
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Y-Forwarded-Proto' => ['https'],
+                        'Y-Forwarded-Host' => ['example3.com'],
+                        'Y-Forwarded-Port' => ['8030'],
                     ],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),

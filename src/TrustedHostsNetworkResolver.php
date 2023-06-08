@@ -104,21 +104,24 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         $this->assertNonEmpty($headerGroups, 'Forwarded header groups');
 
         $allowedHeaderGroupKeys = ['ip', 'protocol', 'host', 'port'];
-        foreach ($headerGroups as $headerGroup) {
+        foreach ($headerGroups as $index => $headerGroup) {
             if (is_array($headerGroup)) {
                 $this->assertNonEmpty($headerGroup, 'Forwarded header group array');
                 $this->assertExactKeysForArray($allowedHeaderGroupKeys, $headerGroup, 'forwarded header group');
 
                 foreach (['ip', 'host', 'port'] as $key) {
                     $this->assertIsNonEmptyString($headerGroup[$key], "Header name for \"$key\"");
+                    $headerGroups[$index][$key] = $this->normalizeHeaderName($headerGroup[$key]);
                 }
 
                 if (is_string($headerGroup['protocol'])) {
                     $this->assertNonEmpty($headerGroup['protocol'], 'Header name for "protocol"');
+                    $headerGroups[$index]['protocol'] = $this->normalizeHeaderName($headerGroup['protocol']);
                 } elseif (is_array($headerGroup['protocol'])) {
                     $this->assertNonEmpty($headerGroup['protocol'], 'Protocol header config array');
                     $this->assertExactKeysForArray([0, 1], $headerGroup['protocol'], 'protocol header config');
                     $this->assertIsNonEmptyString($headerGroup['protocol'][0], 'Header name for "protocol"');
+                    $headerGroups[$index]['protocol'][0] = $this->normalizeHeaderName($headerGroup['protocol'][0]);
 
                     if (is_array($headerGroup['protocol'][1])) {
                         $this->assertNonEmpty($headerGroup['protocol'][1], 'Values in mapping for protocol header');
@@ -157,12 +160,14 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
         $this->assertNonEmpty($headerNames, 'Typical forwarded headers');
 
+        $normalizedHeaderNames = [];
         foreach ($headerNames as $headerName) {
             $this->assertIsNonEmptyString($headerName, 'Typical forwarded header');
+            $normalizedHeaderNames[] = $this->normalizeHeaderName($headerName);
         }
 
         $new = clone $this;
-        $new->typicalForwardedHeaders = $headerNames;
+        $new->typicalForwardedHeaders = $normalizedHeaderNames;
         return $new;
     }
 
@@ -184,9 +189,15 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        // TODO: Remove non-typical forwarded headers.
+        /** @var string|null $remoteAddr */
+        $remoteAddr = $request->getServerParams()['REMOTE_ADDR'] ?? null;
+        if ($remoteAddr === null) {
+            return $this->handleNotTrusted($request, $handler);
+        }
 
-        $connectionChainItems = $this->getConnectionChainItems($request);
+        $request = $this->filterTypicalForwardedHeaders($request);
+
+        $connectionChainItems = $this->getConnectionChainItems($remoteAddr, $request);
         if (empty($connectionChainItems)) {
             return $this->handleNotTrusted($request, $handler);
         }
@@ -343,11 +354,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $handler->handle($request->withAttribute(self::ATTRIBUTE_REQUEST_CLIENT_IP, null));
     }
 
-    /**
-     * @param string[] $headers
-     */
-    private function removeHeaders(ServerRequestInterface $request, array $headers): ServerRequestInterface
+    private function filterTypicalForwardedHeaders(ServerRequestInterface $request): ServerRequestInterface
     {
+        $headers = array_diff($this->typicalForwardedHeaders, $this->getTrustedForwardedHeaders());
         foreach ($headers as $header) {
             $request = $request->withoutHeader($header);
         }
@@ -355,14 +364,32 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $request;
     }
 
-    private function getConnectionChainItems(ServerRequestInterface $request): array
+    private function getTrustedForwardedHeaders(): array
     {
-        /** @var string|null $remoteAddr */
-        $remoteAddr = $request->getServerParams()['REMOTE_ADDR'] ?? null;
-        if ($remoteAddr === null) {
-            return [];
+        $headers = [];
+        foreach ($this->forwardedHeaderGroups as $headerGroup) {
+            if (is_string($headerGroup)) {
+                $headers[] = $headerGroup;
+
+                continue;
+            }
+
+            $headers[] = $headerGroup['ip'];
+            $headers[] = is_string($headerGroup['protocol']) ? $headerGroup['protocol'] : $headerGroup['protocol'][0];
+            $headers[] = $headerGroup['host'];
+            $headers[] = $headerGroup['port'];
         }
 
+        return $headers;
+    }
+
+    private function normalizeHeaderName(string $headerName): string
+    {
+        return strtolower($headerName);
+    }
+
+    private function getConnectionChainItems(string $remoteAddr, ServerRequestInterface $request): array
+    {
         $items = [
             [
                 'ip' => $remoteAddr,

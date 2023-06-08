@@ -31,8 +31,7 @@ use Yiisoft\Validator\ValidatorInterface;
  *     protocol: ?string,
  *     host: ?string,
  *     port: ?int,
- *     hiddenIp: ?string,
- *     hiddenPort: ?string,
+ *     ipIdentifier: ?string,
  * }
  * @psalm-type ProtocolHeadersData = array<string, array<non-empty-string, array<array-key, string>>|callable>
  */
@@ -67,7 +66,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         'front-end-https',
     ];
     /**
-     * Name of the request attribute holding IP address obtained from a trusted header.
+     * Name of the request attribute holding IP address resolved from connection chain.
      */
     public const ATTRIBUTE_REQUEST_CLIENT_IP = 'requestClientIp';
 
@@ -175,7 +174,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns a new instance with the specified request's attribute name to which middleware writes trusted path data.
+     * Returns a new instance with the specified request's attribute name to which middleware writes validated and
+     * trusted connection chain items.
      *
      * @param string|null $attribute The request attribute name.
      */
@@ -244,40 +244,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Reverse obfuscating host data
-     *
-     * RFC 7239 allows using obfuscated host data. In this case, either specifying the
-     * IP address or dropping the proxy endpoint is required to determine validated route.
-     *
-     * By default, it doesn't perform any transformation on the data. You can override this method.
-     *
-     * @return array|null reversed obfuscated host data or null.
-     * In case of `null` data is discarded, and the process continues with the next portion of host data.
-     * If the return value is an array, it must contain at least the `ip` key.
-     *
-     * @psalm-param HostData|null $hostData
-     *
-     * @psalm-return HostData|null
-     *
      * @see parseProxiesFromRfcHeader()
      * @link https://tools.ietf.org/html/rfc7239#section-6.2
      * @link https://tools.ietf.org/html/rfc7239#section-6.3
      */
-    protected function reverseObfuscateIp(
-        string $hiddenIp,
+    protected function reverseObfuscateIpIdentifier(
+        string $ipIdentifier,
         array $validatedConnectionChainItems,
         array $remainingConnectionChainItems,
         RequestInterface $request,
-    ): ?string {
-        return null;
-    }
-
-    protected function reverseObfuscatePort(
-        string $hiddenPort,
-        array $validatedConnectionChainItems,
-        array $remainingConnectionChainItems,
-        RequestInterface $request,
-    ): ?string {
+    ): ?array {
         return null;
     }
 
@@ -381,8 +357,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 'protocol' => null,
                 'host' => null,
                 'port' => null,
-                'hiddenIp' => null,
-                'hiddenPort' => null,
+                'ipIdentifier' => null,
             ],
         ];
         foreach ($this->forwardedHeaderGroups as $forwardedHeaderGroup) {
@@ -409,8 +384,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                     'protocol' => $this->getProtocol($request, $forwardedHeaderGroup['protocol']),
                     'host' => $request->getHeaderLine($forwardedHeaderGroup['host']) ?: null,
                     'port' => $request->getHeaderLine($forwardedHeaderGroup['port']) ?: null,
-                    'hiddenIp' => null,
-                    'hiddenPort' => null,
+                    'ipIdentifier' => null,
                 ];
             }
 
@@ -450,32 +424,26 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             // TODO: Matches contains empty strings.
             // TODO: Use heredoc syntax.
             $pattern = '/^' .
-                '(?:' .
-                    '(?<ip>' . IpHelper::IPV4_PATTERN .'|[[]' . IpHelper::IPV6_PATTERN . '[]])' .
-                    '|' .
-                    '(?<hiddenIp>unknown|_[\w.-]+)' .
-                ')' .
+                '(?<ip>' . IpHelper::IPV4_PATTERN .'|[[]' . IpHelper::IPV6_PATTERN . '[]])' .
                 '(?:' .
                     ':' .
                     '(?<port>\d{1,5}+)' .
-                    '|' .
-                    '(?<hiddenPort>[\w.-]+)' .
                 ')?' .
+                '|' .
+                '(?<ipIdentifier>unknown|_[\w.-]+)' .
                 '$/';
             if (preg_match($pattern, $directiveMap['for'], $matches) === 0) {
                 throw new InvalidRfcProxyItemException();
             }
 
             $ip = $matches['ip'] ?? null;
-            $hiddenIp = $matches['hiddenIp'] ?? null;
-            $hiddenPort = $matches['hiddenPort'] ?? null;
+            $ipIdentifier = $matches['ipIdentifier'] ?? null;
             $proxies[] = [
                 'ip' => $ip ?: null,
                 'protocol' => $directiveMap['proto'] ?? null,
                 'host' => $directiveMap['host'] ?? null,
-                'port' => isset($matches['port']) ? (int) $matches['port'] : null,
-                'hiddenIp' => $hiddenIp ?: null,
-                'hiddenPort' => $hiddenPort ?: null,
+                'port' => isset($matches['port']) && $matches['port'] !== '' ? (int) $matches['port'] : null,
+                'ipIdentifier' => $ipIdentifier ?: null,
             ];
         }
 
@@ -530,21 +498,18 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             $proxiesCount++;
 
             $rawItem = array_shift($remainingItems);
-            if ($rawItem['hiddenIp'] !== null) {
-                if ($rawItem['hiddenIp'] === 'unknown') {
+            if ($rawItem['ipIdentifier'] !== null) {
+                if ($rawItem['ipIdentifier'] === 'unknown') {
                     break;
                 }
 
-                $ip = $this->reverseObfuscateIp($rawItem['hiddenIp'], $validatedItems, $remainingItems, $request);
-                if ($ip !== null) {
-                    $rawItem['ip'] = $ip;
-                }
-            }
+                $ipData = $this->reverseObfuscateIpIdentifier($rawItem['ipIdentifier'], $validatedItems, $remainingItems, $request);
+                if ($ipData !== null) {
+                    $rawItem['ip'] = $ipData[0];
 
-            if ($rawItem['hiddenPort'] !== null) {
-                $port = $this->reverseObfuscatePort($rawItem['hiddenPort'], $validatedItems, $remainingItems, $request);
-                if ($port !== null) {
-                    $rawItem['port'] = $port;
+                    if ($ipData[1] !== null) {
+                        $rawItem['port'] = $ipData[1];
+                    }
                 }
             }
 

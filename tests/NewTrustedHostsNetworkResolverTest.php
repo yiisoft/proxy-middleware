@@ -1505,7 +1505,17 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
     public function dataInvalidConnectionChainItem(): array
     {
         return [
-            'IP' => [
+            'IP, remote addr' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => 'invalid18.18.18.18'],
+                ),
+                '"invalid18.18.18.18" is not a valid IP.',
+            ],
+            'IP, proxy' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [

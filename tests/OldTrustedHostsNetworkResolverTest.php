@@ -20,54 +20,6 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
         $this->markTestIncomplete();
     }
 
-    public function dataProcessTrusted(): array
-    {
-        return [
-            'rfc7239, level 2, obfuscated host, unknown, with port' => [[
-                'remoteAddr' => '18.18.18.18',
-                'trustedHosts' => [
-                    [
-                        'hosts' => ['8.8.8.8', '18.18.18.18', '2.2.2.2'],
-                        'ipHeaders' => ['forwarded'],
-                    ],
-                ],
-                'headers' => ['forwarded' => ['for=unknown:1']],
-                'expectedClientIp' => '18.18.18.18',
-            ]],
-        ];
-    }
-
-    /**
-     * @dataProvider dataProcessTrusted
-     */
-    public function testProcessTrusted(array $data): void
-    {
-        $expectedPath = $data['expectedPath'] ?? '/';
-        $expectedQuery = $data['expectedQuery'] ?? '';
-
-        $middleware = in_array('for=unknown', $headers['forwarded'] ?? [], true) ?
-            $this->createCustomTrustedHostsNetworkResolver($remoteAddr) :
-            $this->createTrustedHostsNetworkResolver();
-
-        $this->assertSame($expectedPath, $requestHandler->processedRequest->getUri()->getPath());
-        $this->assertSame($expectedQuery, $requestHandler->processedRequest->getUri()->getQuery());
-    }
-
-    public function testProcessWithAttributeIpsAndWithoutActualHost(): void
-    {
-        $request = $this->createRequestWithSchemaAndHeaders();
-        $requestHandler = new MockRequestHandler();
-        $response = $this
-            ->createTrustedHostsNetworkResolver()
-            ->withAttributeIps('ip')
-            ->process($request, $requestHandler);
-
-        $this->assertSame(Status::OK, $response->getStatusCode());
-        $this->assertSame('', $requestHandler->processedRequest->getUri()->getHost());
-        $this->assertNull($requestHandler->processedRequest->getAttribute('ip', 'default'));
-        $this->assertNull($requestHandler->processedRequest->getAttribute('requestClientIp', 'default'));
-    }
-
     public function dataValidIpAndForCombination(): array
     {
         return [
@@ -150,19 +102,5 @@ final class OldTrustedHostsNetworkResolverTest extends TestCase
             '2.2.2.2',
             $requestHandler->processedRequest->getAttribute(TrustedHostsNetworkResolver::REQUEST_CLIENT_IP),
         );
-    }
-
-    public function testOverwrittenIsValidHost(): void
-    {
-        $middleware = new class (
-            new Validator(),
-        ) extends TrustedHostsNetworkResolver {
-            public function checkIp(string $ip, array $ranges = []): bool
-            {
-                return $ip === '5.5.5.5' ? false : parent::checkIp($ip, $ranges);
-            }
-        };
-        $this->assertFalse($middleware->checkIp('5.5.5.5'));
-        $this->assertTrue($middleware->checkIp('2.2.2.2'));
     }
 }

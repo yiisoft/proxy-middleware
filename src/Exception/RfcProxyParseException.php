@@ -6,6 +6,6 @@ namespace Yiisoft\ProxyMiddleware\Exception;
 
 use Exception;
 
-final class HeaderValueParseException extends Exception
+final class RfcProxyParseException extends Exception
 {
 }

@@ -12,9 +12,8 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
 use Yiisoft\Http\HeaderValueHelper;
-use Yiisoft\ProxyMiddleware\Exception\HeaderValueParseException;
 use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
-use Yiisoft\ProxyMiddleware\Exception\InvalidRfcProxyItemException;
+use Yiisoft\ProxyMiddleware\Exception\RfcProxyParseException;
 use Yiisoft\Validator\Rule\Ip;
 use Yiisoft\Validator\ValidatorInterface;
 
@@ -69,9 +68,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     public const ATTRIBUTE_REQUEST_CLIENT_IP = 'requestClientIp';
 
-    private const PROTOCOL_HTTP = 'http';
-    private const PROTOCOL_HTTPS = 'https';
-    private const ALLOWED_PROTOCOLS = [self::PROTOCOL_HTTP, self::PROTOCOL_HTTPS];
+    private const ALLOWED_RFC_HEADER_DIRECTIVES = ['by', 'for', 'proto', 'host'];
+    private const ALLOWED_PROTOCOLS = ['http', 'https'];
 
     private const PORT_MIN = 1;
     private const PORT_MAX = 65535;
@@ -403,32 +401,38 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             try {
                 /** @psalm-var array<string, string> $directiveMap */
                 $directiveMap = HeaderValueHelper::getParameters($proxyItem);
-            } catch (InvalidArgumentException $exception) {
-                $message = "Unable to parse header value: \"$proxyItem\". {$exception->getMessage()}";
-
-                throw new HeaderValueParseException($message);
+            } catch (InvalidArgumentException) {
+                throw new RfcProxyParseException("Unable to parse RFC header value: \"$proxyItem\".");
             }
 
             if (!isset($directiveMap['for'])) {
-                throw new InvalidRfcProxyItemException();
+                throw new RfcProxyParseException('"for" directive is required.');
             }
 
             foreach ($directiveMap as $name => $value) {
-                if (!in_array($name, ['by', 'for', 'proto', 'host'])) {
-                    throw new InvalidRfcProxyItemException();
+                if (!in_array($name, self::ALLOWED_RFC_HEADER_DIRECTIVES)) {
+                    $allowedDirectivesStr = implode('", "', self::ALLOWED_RFC_HEADER_DIRECTIVES);
+                    $message = "\"$name\" is not a valid directive. Allowed values are: \"$allowedDirectivesStr\" " .
+                        '(case-insensitive).';
+
+                    throw new RfcProxyParseException($message);
                 }
             }
 
             // TODO: Should port be parsed from host instead?
             $pattern = '/^(?<ip>[^:]+)(?::(?<port>\d{1,5}+))?$/';
             if (preg_match($pattern, $directiveMap['for'], $matches) === 0) {
-                throw new InvalidRfcProxyItemException();
+                throw new RfcProxyParseException('"for" directive must contain either an IP or identifier.');
             }
 
             $ip = $matches['ip'] ?? null;
             if ($ip === 'unknown' || str_starts_with($ip, '_')) {
                 $ip = null;
                 $ipIdentifier = $ip;
+
+                if (isset($matches['port'])) {
+                    throw new RfcProxyParseException('IP identifier can\'t have port.');
+                }
             } else {
                 $ipIdentifier = null;
             }

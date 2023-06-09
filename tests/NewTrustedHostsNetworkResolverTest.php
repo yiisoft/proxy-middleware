@@ -11,6 +11,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 use Yiisoft\Http\Status;
 use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
+use Yiisoft\ProxyMiddleware\Exception\RfcProxyParseException;
 use Yiisoft\ProxyMiddleware\Tests\Support\MockRequestHandler;
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
 use Yiisoft\Validator\Validator;
@@ -1549,7 +1550,113 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
         $this->assertSame($expectedData['port'] ?? null, $uri->getPort());
     }
 
-    public function dataInvalidConnectionChainItem(): array
+    public function dataRfcProxyParseException(): array
+    {
+        return [
+            'badly formed header value, no double quotes for IP with port' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for=5.5.5.5:8082;proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'Unable to parse RFC header value: "for=5.5.5.5:8082;proto=https;host=example2.com".',
+            ],
+            'missing "for" directive' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"for" directive is required.',
+            ],
+            'contains non-allowed directive' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com;test=value',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"test" is not a valid directive. Allowed values are: "by", "for", "proto", "host" (case-insensitive).',
+            ],
+            'invalid "for" directive' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for=":";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"for" directive must contain either an IP or identifier.',
+            ],
+            'IP identifier with port, unknown' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="unknown:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'IP identifier can\'t have port.',
+            ],
+            'IP identifier with port, obfuscated' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'IP identifier can\'t have port.',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataRfcProxyParseException
+     */
+    public function testRfcProxyParseException(
+        TrustedHostsNetworkResolver $middleware,
+        ServerRequestInterface $request,
+        string $expectedExceptionMessage,
+    ): void
+    {
+        $requestHandler = new MockRequestHandler();
+
+        $this->expectException(RfcProxyParseException::class);
+        $this->expectExceptionMessage($expectedExceptionMessage);
+        $middleware->process($request, $requestHandler);
+    }
+
+    public function dataInvalidConnectionChainItemException(): array
     {
         return [
             'IP, remote addr' => [
@@ -1646,9 +1753,9 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
     }
 
     /**
-     * @dataProvider dataInvalidConnectionChainItem
+     * @dataProvider dataInvalidConnectionChainItemException
      */
-    public function testInvalidConnectionChainItem(
+    public function testInvalidConnectionChainItemException(
         TrustedHostsNetworkResolver $middleware,
         ServerRequestInterface $request,
         string $expectedExceptionMessage,
@@ -1677,6 +1784,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 'Value returned from callable for protocol header must be a valid protocol. Allowed values are: ' .
                 '"http", "https" (case-sensitive).',
             ],
+            // TODO: Protocol from header with "X" prefix.
         ];
     }
 

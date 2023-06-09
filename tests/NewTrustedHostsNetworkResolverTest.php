@@ -1319,7 +1319,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     headers: [
                         'Forwarded' => [
                             'for="9.9.9.9:8083";proto=http;host=example3.com',
-                            'for="5.5.5.5:8082";proto=HTTPS;host=EXAMPLE2.COM',
+                            'FOR="5.5.5.5:8082";PROTO=HTTPS;HOST=EXAMPLE2.COM',
                             'for="2.2.2.2:8081";proto=http;host=example1.com',
                         ],
                     ],

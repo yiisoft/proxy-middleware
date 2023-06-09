@@ -415,30 +415,28 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 }
             }
 
-            // TODO: Should port be parsed from host instead?
-            $pattern = '/^(?<ip>[^:]+)(?::(?<port>\d{1,5}+))?$/';
-            if (preg_match($pattern, $directiveMap['for'], $matches) === 0) {
-                throw new RfcProxyParseException('"for" directive must contain either an IP or identifier.');
-            }
-
-            $ip = $matches['ip'] ?? null;
-            if ($ip === 'unknown' || str_starts_with($ip, '_')) {
+            if ($this->checkIpIdentifier($directiveMap['for'])) {
                 $ip = null;
-                $ipIdentifier = $ip;
-
-                if (isset($matches['port'])) {
-                    throw new RfcProxyParseException('IP identifier can\'t have port.');
-                }
+                $port = null;
+                $ipIdentifier = $directiveMap['for'];
             } else {
+                $ipData = explode(':', $directiveMap['for'], 2);
+                $ip = $ipData[0];
+                if ($ip === '') {
+                    throw new RfcProxyParseException('IP is missing in "for" directive.');
+                }
+
+                // TODO: Should port be parsed from host instead?
+                $port = $ipData[1] ?? null;
                 $ipIdentifier = null;
             }
 
             $proxies[] = [
-                'ip' => $ip ?: null,
+                'ip' => $ip,
                 'protocol' => $directiveMap['proto'] ?? null,
                 'host' => $directiveMap['host'] ?? null,
-                'port' => isset($matches['port']) && $matches['port'] !== '' ? (int) $matches['port'] : null,
-                'ipIdentifier' => $ipIdentifier ?: null,
+                'port' => $port,
+                'ipIdentifier' => $ipIdentifier,
             ];
         }
 
@@ -568,32 +566,37 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return (new Ip(ranges: $this->trustedIps))->isAllowed($value);
     }
 
-    private function checkProtocol(string $protocol): bool
+    private function checkProtocol(string $value): bool
     {
-        return in_array($protocol, self::ALLOWED_PROTOCOLS);
+        return in_array($value, self::ALLOWED_PROTOCOLS);
     }
 
-    private function checkHost(string $host): bool
+    private function checkHost(string $value): bool
     {
-        return filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
+        return filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
     }
 
-    private function checkPort(string|int $port): bool
+    private function checkPort(string|int $value): bool
     {
-        if (is_string($port)) {
+        if (is_string($value)) {
             /**
              * @infection-ignore-all
              * - PregMatchRemoveCaret.
              * - PregMatchRemoveDollar.
              */
-            if (preg_match('/^\d{1,5}$/', $port) !== 1) {
+            if (preg_match('/^\d{1,5}$/', $value) !== 1) {
                 return false;
             }
 
             /** @infection-ignore-all CastInt */
-            $port = (int) $port;
+            $value = (int) $value;
         }
 
-        return $port >= self::PORT_MIN && $port <= self::PORT_MAX;
+        return $value >= self::PORT_MIN && $value <= self::PORT_MAX;
+    }
+
+    private function checkIpIdentifier(string $value): bool
+    {
+        return $value === 'unknown' || preg_match('/_[\w.-]+$/', $value) !== 0;
     }
 }

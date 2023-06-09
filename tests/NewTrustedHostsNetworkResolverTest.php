@@ -1607,35 +1607,7 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     ],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
-                '"for" directive must contain either an IP or identifier.',
-            ],
-            'IP identifier with port, unknown' => [
-                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
-                $this->createRequest(
-                    headers: [
-                        'Forwarded' => [
-                            'for="9.9.9.9:8083";proto=http;host=example3.com',
-                            'for="unknown:8082";proto=https;host=example2.com',
-                            'for="2.2.2.2:8081";proto=http;host=example1.com',
-                        ],
-                    ],
-                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-                ),
-                'IP identifier can\'t have port.',
-            ],
-            'IP identifier with port, obfuscated' => [
-                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
-                $this->createRequest(
-                    headers: [
-                        'Forwarded' => [
-                            'for="9.9.9.9:8083";proto=http;host=example3.com',
-                            'for="_obfuscated:8082";proto=https;host=example2.com',
-                            'for="2.2.2.2:8081";proto=http;host=example1.com',
-                        ],
-                    ],
-                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-                ),
-                'IP identifier can\'t have port.',
+                'IP is missing in "for" directive.',
             ],
         ];
     }
@@ -1678,6 +1650,34 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 '"invalid5.5.5.5" is not a valid IP.',
+            ],
+            'IP identifier with port, unknown' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="unknown:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"unknown" is not a valid IP.',
+            ],
+            'IP identifier with port, obfuscated' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"_obfuscated" is not a valid IP.',
             ],
             'protocol' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),

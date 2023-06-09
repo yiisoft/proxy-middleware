@@ -12,7 +12,6 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
 use Yiisoft\Http\HeaderValueHelper;
-use Yiisoft\NetworkUtilities\IpHelper;
 use Yiisoft\ProxyMiddleware\Exception\HeaderValueParseException;
 use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
 use Yiisoft\ProxyMiddleware\Exception\InvalidRfcProxyItemException;
@@ -421,23 +420,19 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             }
 
             // TODO: Should port be parsed from host instead?
-            // TODO: Matches contains empty strings.
-            // TODO: Use heredoc syntax.
-            $pattern = '/^' .
-                '(?<ip>' . IpHelper::IPV4_PATTERN .'|[[]' . IpHelper::IPV6_PATTERN . '[]])' .
-                '(?:' .
-                    ':' .
-                    '(?<port>\d{1,5}+)' .
-                ')?' .
-                '|' .
-                '(?<ipIdentifier>unknown|_[\w.-]+)' .
-                '$/';
+            $pattern = '/^(?<ip>[^:]+)(?::(?<port>\d{1,5}+))?$/';
             if (preg_match($pattern, $directiveMap['for'], $matches) === 0) {
                 throw new InvalidRfcProxyItemException();
             }
 
             $ip = $matches['ip'] ?? null;
-            $ipIdentifier = $matches['ipIdentifier'] ?? null;
+            if ($ip === 'unknown' || str_starts_with($ip, '_')) {
+                $ip = null;
+                $ipIdentifier = $ip;
+            } else {
+                $ipIdentifier = null;
+            }
+
             $proxies[] = [
                 'ip' => $ip ?: null,
                 'protocol' => $directiveMap['proto'] ?? null,

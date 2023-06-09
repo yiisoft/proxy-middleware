@@ -198,10 +198,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         $request = $this->filterTypicalForwardedHeaders($request);
 
         $connectionChainItems = $this->getConnectionChainItems($remoteAddr, $request);
-        if (empty($connectionChainItems)) {
-            return $this->handleNotTrusted($request, $handler);
-        }
-
         $validatedConnectionChainItems = [];
         $connectionChainItem = $this->iterateConnectionChainItems(
             $connectionChainItems,

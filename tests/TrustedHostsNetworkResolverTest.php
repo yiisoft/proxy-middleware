@@ -1697,7 +1697,21 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"invalid18.18.18.18" is not a valid IP.',
             ],
-            'IP, proxy' => [
+            'IP, RFC header' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="invalid5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"invalid5.5.5.5" is not a valid IP.',
+            ],
+            'IP, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1707,7 +1721,37 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"invalid5.5.5.5" is not a valid IP.',
             ],
-            'IP identifier with port, unknown' => [
+            'IP with port, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5:8082', '2.2.2.2'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"5.5.5.5:8082" is not a valid IP.',
+            ],
+            'IP identifier, unknown, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', 'unknown', '2.2.2.2'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"unknown" is not a valid IP.',
+            ],
+            'IP identifier, obfuscated, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', '_obfuscated', '2.2.2.2'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"_obfuscated" is not a valid IP.',
+            ],
+            'IP identifier with port, unknown, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1721,7 +1765,17 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"unknown" is not a valid IP.',
             ],
-            'IP identifier with port, obfuscated' => [
+            'IP identifier with port, unknown, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', 'unknown:8082', '2.2.2.2'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"unknown:8082" is not a valid IP.',
+            ],
+            'IP identifier with port, obfuscated, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1735,7 +1789,17 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"_obfuscated" is not a valid IP.',
             ],
-            'protocol' => [
+            'IP identifier with port, obfuscated, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', '_obfuscated:8082', '2.2.2.2'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"_obfuscated:8082" is not a valid IP.',
+            ],
+            'protocol, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1749,7 +1813,18 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"https1" protocol is not allowed. Allowed values are: "http", "https" (case-sensitive).',
             ],
-            'host' => [
+            'protocol, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'X-Forwarded-Proto' => ['https1'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"https1" protocol is not allowed. Allowed values are: "http", "https" (case-sensitive).',
+            ],
+            'host, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1758,6 +1833,17 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                             'for="5.5.5.5:8082";proto=https;host=_example2.com',
                             'for="2.2.2.2:8081";proto=http;host=example1.com',
                         ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"_example2.com" is not a valid host',
+            ],
+            'host, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'X-Forwarded-Host' => ['_example2.com'],
                     ],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),

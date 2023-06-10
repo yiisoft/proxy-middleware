@@ -588,7 +588,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
         if ($ipData[1] !== null) {
             // TODO: Allow int too?
-            $this->assertIsNonEmptyString($ipData[1], 'Port returned from reverse-obfuscated IP data');
+            $this->assertIsNonEmptyString(
+                $ipData[1],
+                'Port returned from reverse-obfuscated IP data',
+                RuntimeException::class,
+            );
         }
     }
 

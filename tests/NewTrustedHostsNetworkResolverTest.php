@@ -1517,24 +1517,22 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ],
             ],
             'RFC header, IP related data, hidden IP, obfuscated, reverse-obfuscating' => [
-                (
-                    new class (new Validator()) extends TrustedHostsNetworkResolver
+                (new class (new Validator()) extends TrustedHostsNetworkResolver
+                {
+                    protected function reverseObfuscateIpIdentifier(
+                        string $ipIdentifier,
+                        array $validatedConnectionChainItems,
+                        array $remainingConnectionChainItems,
+                        RequestInterface $request,
+                    ): ?array
                     {
-                        protected function reverseObfuscateIpIdentifier(
-                            string $ipIdentifier,
-                            array $validatedConnectionChainItems,
-                            array $remainingConnectionChainItems,
-                            RequestInterface $request,
-                        ): ?array
-                        {
-                            return match ($ipIdentifier) {
-                                '_obfuscated1' => ['2.2.2.2', null],
-                                '_obfuscated2' => ['5.5.5.5', '8082'],
-                                default => null,
-                            };
-                        }
+                        return match ($ipIdentifier) {
+                            '_obfuscated1' => ['2.2.2.2', null],
+                            '_obfuscated2' => ['5.5.5.5', '8082'],
+                            default => null,
+                        };
                     }
-                )
+                })
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
@@ -1874,6 +1872,132 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
             ],
             serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
         );
+        $requestHandler = new MockRequestHandler();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage($expectedExceptionMessage);
+        $middleware->process($request, $requestHandler);
+    }
+
+    public function dataReverseObfuscateIpIdentifierException(): array
+    {
+        return [
+            'empty array' => [
+                (new class (new Validator()) extends TrustedHostsNetworkResolver
+                {
+                    protected function reverseObfuscateIpIdentifier(
+                        string $ipIdentifier,
+                        array $validatedConnectionChainItems,
+                        array $remainingConnectionChainItems,
+                        RequestInterface $request,
+                    ): ?array
+                    {
+                        return [];
+                    }
+                })
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'Reverse-obfuscated IP data can\'t be empty.',
+            ],
+            'wrong items count' => [
+                (new class (new Validator()) extends TrustedHostsNetworkResolver
+                {
+                    protected function reverseObfuscateIpIdentifier(
+                        string $ipIdentifier,
+                        array $validatedConnectionChainItems,
+                        array $remainingConnectionChainItems,
+                        RequestInterface $request,
+                    ): ?array
+                    {
+                        return ['2.2.2.2', '8081', 'test'];
+                    }
+                })
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'Invalid array keys for reverse-obfuscated IP data. The allowed and required keys are: "0", "1".',
+            ],
+            'IP is empty string' => [
+                (new class (new Validator()) extends TrustedHostsNetworkResolver
+                {
+                    protected function reverseObfuscateIpIdentifier(
+                        string $ipIdentifier,
+                        array $validatedConnectionChainItems,
+                        array $remainingConnectionChainItems,
+                        RequestInterface $request,
+                    ): ?array
+                    {
+                        return ['', '8081'];
+                    }
+                })
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'IP returned from reverse-obfuscated IP data must be non-empty string.',
+            ],
+            'Port is empty string' => [
+                (new class (new Validator()) extends TrustedHostsNetworkResolver
+                {
+                    protected function reverseObfuscateIpIdentifier(
+                        string $ipIdentifier,
+                        array $validatedConnectionChainItems,
+                        array $remainingConnectionChainItems,
+                        RequestInterface $request,
+                    ): ?array
+                    {
+                        return ['2.2.2.2', ''];
+                    }
+                })
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'Port returned from reverse-obfuscated IP data must be non-empty string.',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataReverseObfuscateIpIdentifierException
+     */
+    public function testReverseObfuscateIpIdentifierException(
+        TrustedHostsNetworkResolver $middleware,
+        ServerRequestInterface $request,
+        string $expectedExceptionMessage
+    ): void
+    {
         $requestHandler = new MockRequestHandler();
 
         $this->expectException(RuntimeException::class);

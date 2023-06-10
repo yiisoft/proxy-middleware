@@ -1856,50 +1856,96 @@ final class TrustedHostsNetworkResolverTest extends TestCase
     {
         return [
             'mapping, no matching item' => [
-                ['Test' => 'https'],
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => [
+                                'front-end-https',
+                                ['Test' => 'https'],
+                            ],
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                    ]),
+                $this->createRequest(
+                    headers: [
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Front-End-Https' => ['On'],
+                        'Y-Forwarded-Host' => ['example.com'],
+                        'Y-Forwarded-Port' => ['8080'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
                 'Unable to resolve "On" protocol via mapping.',
             ],
             'callable, return value is null' => [
-                static fn (string $protocol): ?string => null,
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => [
+                                'front-end-https',
+                                static fn (string $protocol): ?string => null,
+                            ],
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                    ]),
+                $this->createRequest(
+                    headers: [
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Front-End-Https' => ['On'],
+                        'Y-Forwarded-Host' => ['example.com'],
+                        'Y-Forwarded-Port' => ['8080'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
                 'Unable to resolve "On" protocol via callable.',
             ],
             'callable, return value is not a valid protocol' => [
-                static fn (string $protocol): ?string => 'test',
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        [
+                            'ip' => 'y-forwarded-for',
+                            'protocol' => [
+                                'front-end-https',
+                                static fn (string $protocol): ?string => 'test',
+                            ],
+                            'host' => 'y-forwarded-host',
+                            'port' => 'y-forwarded-port',
+                        ],
+                    ]),
+                $this->createRequest(
+                    headers: [
+                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Front-End-Https' => ['On'],
+                        'Y-Forwarded-Host' => ['example.com'],
+                        'Y-Forwarded-Port' => ['8080'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
                 'Value returned from callable for protocol header must be a valid protocol. Allowed values are: ' .
                 '"http", "https" (case-sensitive).',
             ],
-            // TODO: Protocol from header with "X" prefix.
         ];
     }
 
     /**
      * @dataProvider dataGetProtocolException
      */
-    public function testGetProtocolException(array|callable $protocolResolvingConfig, string $expectedExceptionMessage): void
+    public function testGetProtocolException(
+        TrustedHostsNetworkResolver $middleware,
+        ServerRequestInterface $request,
+        string $expectedExceptionMessage,
+    ): void
     {
-        $middleware = $this
-            ->createMiddleware()
-            ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
-            ->withForwardedHeaderGroups([
-                [
-                    'ip' => 'y-forwarded-for',
-                    'protocol' => [
-                        'front-end-https',
-                        $protocolResolvingConfig,
-                    ],
-                    'host' => 'y-forwarded-host',
-                    'port' => 'y-forwarded-port',
-                ],
-            ]);
-        $request = $this->createRequest(
-            headers: [
-                'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
-                'Front-End-Https' => ['On'],
-                'Y-Forwarded-Host' => ['example.com'],
-                'Y-Forwarded-Port' => ['8080'],
-            ],
-            serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-        );
         $requestHandler = new MockRequestHandler();
 
         $this->expectException(RuntimeException::class);

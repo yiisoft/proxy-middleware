@@ -17,7 +17,7 @@ use Yiisoft\ProxyMiddleware\Tests\Support\MockRequestHandler;
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
 use Yiisoft\Validator\Validator;
 
-final class NewTrustedHostsNetworkResolverTest extends TestCase
+final class TrustedHostsNetworkResolverTest extends TestCase
 {
     public function dataWithTrustedIpsException(): array
     {

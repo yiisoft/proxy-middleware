@@ -619,23 +619,21 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
     }
 
-    private function checkPort(string|int $value): bool
+    private function checkPort(string $value): bool
     {
-        if (is_string($value)) {
-            /**
-             * @infection-ignore-all
-             * - PregMatchRemoveCaret.
-             * - PregMatchRemoveDollar.
-             */
-            if (preg_match('/^\d{1,5}$/', $value) !== 1) {
-                return false;
-            }
-
-            /** @infection-ignore-all CastInt */
-            $value = (int) $value;
+        /**
+         * @infection-ignore-all
+         * - PregMatchRemoveCaret.
+         * - PregMatchRemoveDollar.
+         */
+        if (preg_match('/^\d{1,5}$/', $value) !== 1) {
+            return false;
         }
 
-        return $value >= self::PORT_MIN && $value <= self::PORT_MAX;
+        /** @infection-ignore-all CastInt */
+        $intValue = (int) $value;
+
+        return $intValue >= self::PORT_MIN && $intValue <= self::PORT_MAX;
     }
 
     private function checkIpIdentifier(string $value): bool

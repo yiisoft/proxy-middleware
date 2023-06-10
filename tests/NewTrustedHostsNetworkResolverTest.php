@@ -1791,6 +1791,34 @@ final class NewTrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"99999" is not a valid port. Port must be a number between 1 and 65535.',
             ],
+            'port, greater than max' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:123456";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"123456" is not a valid port. Port must be a number between 1 and 65535.',
+            ],
+            'port, contains non-allowed characters' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:a1234";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"a1234" is not a valid port. Port must be a number between 1 and 65535.',
+            ],
             'port, less than min by 1' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(

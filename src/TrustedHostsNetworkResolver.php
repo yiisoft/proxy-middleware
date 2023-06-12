@@ -24,12 +24,13 @@ use Yiisoft\Validator\ValidatorInterface;
  * Make sure that the trusted host always overwrites or removes user-defined headers
  * to avoid security issues.
  *
- * @psalm-type ConnectionChainItem = array{
+ * @psalm-type RawConnectionChainItem = array{
  *     ip: ?string,
  *     protocol: ?string,
  *     host: ?string,
- *     port: ?int,
+ *     port: ?string,
  *     ipIdentifier: ?string,
+ *     wasIpValidated: bool
  * }
  * @psalm-type ProtocolHeadersData = array<string, array<non-empty-string, array<array-key, string>>|callable>
  */
@@ -364,6 +365,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 'host' => null,
                 'port' => null,
                 'ipIdentifier' => null,
+                'wasIpValidated' => false,
             ],
         ];
         foreach ($this->forwardedHeaderGroups as $forwardedHeaderGroup) {
@@ -387,10 +389,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             foreach ($requestIps as $requestIp) {
                 $items[] = [
                     'ip' => $requestIp,
-                    'protocol' => $this->getProtocol($request, $forwardedHeaderGroup['protocol']),
+                    'protocol' => $this->getProtocolFromSeparateHeader($request, $forwardedHeaderGroup['protocol']),
                     'host' => $request->getHeaderLine($forwardedHeaderGroup['host']) ?: null,
                     'port' => $request->getHeaderLine($forwardedHeaderGroup['port']) ?: null,
                     'ipIdentifier' => null,
+                    'wasIpValidated' => false,
                 ];
             }
 
@@ -400,63 +403,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $items;
     }
 
-    /**
-     * @link https://tools.ietf.org/html/rfc7239
-     */
-    private function parseProxiesFromRfcHeader(array $proxyItems): array
-    {
-        $proxies = [];
-        foreach ($proxyItems as $proxyItem) {
-            try {
-                /** @psalm-var array<string, string> $directiveMap */
-                $directiveMap = HeaderValueHelper::getParameters($proxyItem);
-            } catch (InvalidArgumentException) {
-                throw new RfcProxyParseException("Unable to parse RFC header value: \"$proxyItem\".");
-            }
-
-            if (!isset($directiveMap['for'])) {
-                throw new RfcProxyParseException('"for" directive is required.');
-            }
-
-            foreach ($directiveMap as $name => $value) {
-                if (!in_array($name, self::ALLOWED_RFC_HEADER_DIRECTIVES)) {
-                    $allowedDirectivesStr = implode('", "', self::ALLOWED_RFC_HEADER_DIRECTIVES);
-                    $message = "\"$name\" is not a valid directive. Allowed values are: \"$allowedDirectivesStr\" " .
-                        '(case-insensitive).';
-
-                    throw new RfcProxyParseException($message);
-                }
-            }
-
-            if ($this->checkIpIdentifier($directiveMap['for'])) {
-                $ip = null;
-                $port = null;
-                $ipIdentifier = $directiveMap['for'];
-            } else {
-                $ipData = explode(':', $directiveMap['for'], 2);
-                $ip = $ipData[0];
-                if ($ip === '') {
-                    throw new RfcProxyParseException('IP is missing in "for" directive.');
-                }
-
-                // TODO: Should port be parsed from host instead?
-                $port = $ipData[1] ?? null;
-                $ipIdentifier = null;
-            }
-
-            $proxies[] = [
-                'ip' => $ip,
-                'protocol' => $directiveMap['proto'] ?? null,
-                'host' => $directiveMap['host'] ?? null,
-                'port' => $port,
-                'ipIdentifier' => $ipIdentifier,
-            ];
-        }
-
-        return $proxies;
-    }
-
-    private function getProtocol(ServerRequestInterface $request, string|array|callable $configValue): ?string
+    private function getProtocolFromSeparateHeader(
+        ServerRequestInterface $request,
+        string|array|callable $configValue,
+    ): ?string
     {
         if (is_string($configValue)) {
             return $request->getHeaderLine($configValue) ?: null;
@@ -488,6 +438,77 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         }
 
         return $protocol;
+    }
+
+    /**
+     * @link https://tools.ietf.org/html/rfc7239
+     */
+    private function parseProxiesFromRfcHeader(array $proxyItems): array
+    {
+        $proxies = [];
+        foreach ($proxyItems as $proxyItem) {
+            try {
+                /** @psalm-var array<string, string> $directiveMap */
+                $directiveMap = HeaderValueHelper::getParameters($proxyItem);
+            } catch (InvalidArgumentException) {
+                throw new RfcProxyParseException("Unable to parse RFC header value: \"$proxyItem\".");
+            }
+
+            if (!isset($directiveMap['for'])) {
+                throw new RfcProxyParseException('"for" directive is required.');
+            }
+
+            foreach ($directiveMap as $name => $value) {
+                if (!in_array($name, self::ALLOWED_RFC_HEADER_DIRECTIVES)) {
+                    $allowedDirectivesStr = implode('", "', self::ALLOWED_RFC_HEADER_DIRECTIVES);
+                    $message = "\"$name\" is not a valid directive. Allowed values are: \"$allowedDirectivesStr\" " .
+                        '(case-insensitive).';
+
+                    throw new RfcProxyParseException($message);
+                }
+            }
+
+            $wasIpValidated = false;
+
+            if ($this->checkIpIdentifier($directiveMap['for'])) {
+                $ip = null;
+                $port = null;
+                $ipIdentifier = $directiveMap['for'];
+            } else {
+                if (preg_match('/^\[(?<ip>.+)](?::(?<port>\d{1,5}+))?$/', $directiveMap['for'], $matches)) {
+                    $ip = $matches['ip'];
+                    if (!$this->checkIpv6($ip)) {
+                        $message = "Enclosing in square brackets assumes presence of valid IPv6, \"$ip\" given.";
+
+                        throw new RfcProxyParseException($message);
+                    }
+
+                    $port = $matches['port'] ?? null;
+                    $wasIpValidated = true;
+                } else {
+                    $ipData = explode(':', $directiveMap['for'], 2);
+                    $ip = $ipData[0];
+                    if ($ip === '') {
+                        throw new RfcProxyParseException('IP is missing in "for" directive.');
+                    }
+
+                    $port = $ipData[1] ?? null;
+                }
+
+                $ipIdentifier = null;
+            }
+
+            $proxies[] = [
+                'ip' => $ip,
+                'protocol' => $directiveMap['proto'] ?? null,
+                'host' => $directiveMap['host'] ?? null,
+                'port' => $port,
+                'ipIdentifier' => $ipIdentifier,
+                'wasIpValidated' => $wasIpValidated,
+            ];
+        }
+
+        return $proxies;
     }
 
     private function iterateConnectionChainItems(
@@ -526,7 +547,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             }
 
             $ip = $rawItem['ip'];
-            if ($ip !== null && !$this->checkIp($ip)) {
+            if ($ip !== null && !$rawItem['wasIpValidated'] && !$this->checkIp($ip)) {
                 throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP.");
             }
 
@@ -566,6 +587,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             }
 
             $item = $rawItem;
+            unset($item['wasIpValidated']);
             $validatedItems[] = $item;
         } while (count($remainingItems) > 0);
 
@@ -601,6 +623,14 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $this
             ->validator
             ->validate($value, [new Ip()])
+            ->isValid();
+    }
+
+    private function checkIpv6(string $value): bool
+    {
+        return $this
+            ->validator
+            ->validate($value, [new Ip(allowIpv4: false)])
             ->isValid();
     }
 

@@ -1018,6 +1018,96 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8082,
                 ],
             ],
+            'RFC header, priority over headers with "X" prefix, IP related data, IPv6 without port' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps([
+                        '2001:db8:3333:4444:5555:6666:7777:8888',
+                        '2001:db8:3333:4444:5555:6666:7777:2222',
+                        '2001:db8:3333:4444:5555:6666:7777:0000'
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="[2001:db8:3333:4444:5555:6666:7777:9999]";proto=http;host=example3.com',
+                            'for="[2001:db8:3333:4444:5555:6666:7777:5555]";proto=https;host=example2.com',
+                            'for="[2001:db8:3333:4444:5555:6666:7777:2222]";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '2001:db8:3333:4444:5555:6666:7777:0000'],
+                ),
+                [
+                    'requestClientIp' => '2001:db8:3333:4444:5555:6666:7777:5555',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '2001:db8:3333:4444:5555:6666:7777:0000',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2001:db8:3333:4444:5555:6666:7777:2222',
+                                'protocol' => 'http',
+                                'host' => 'example1.com',
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example2.com',
+                    'port' => null,
+                ],
+            ],
+            'RFC header, priority over headers with "X" prefix, IP related data, IPv6 with port' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps([
+                        '2001:db8:3333:4444:5555:6666:7777:8888',
+                        '2001:db8:3333:4444:5555:6666:7777:2222',
+                        '2001:db8:3333:4444:5555:6666:7777:0000'
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="[2001:db8:3333:4444:5555:6666:7777:9999]:8083";proto=http;host=example3.com',
+                            'for="[2001:db8:3333:4444:5555:6666:7777:5555]:8082";proto=https;host=example2.com',
+                            'for="[2001:db8:3333:4444:5555:6666:7777:2222]:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '2001:db8:3333:4444:5555:6666:7777:0000'],
+                ),
+                [
+                    'requestClientIp' => '2001:db8:3333:4444:5555:6666:7777:5555',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '2001:db8:3333:4444:5555:6666:7777:0000',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2001:db8:3333:4444:5555:6666:7777:2222',
+                                'protocol' => 'http',
+                                'host' => 'example1.com',
+                                'port' => 8081,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example2.com',
+                    'port' => 8082,
+                ],
+            ],
             'headers with "X" prefix, RFC header not in request, IP related data' => [
                 $this
                     ->createMiddleware()
@@ -1665,6 +1755,20 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'IP is missing in "for" directive.',
             ],
+            'not IPv6 enclosed in square brackets' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="[5.5.5.5]:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'Enclosing in square brackets assumes presence of valid IPv6, "5.5.5.5" given.',
+            ],
         ];
     }
 
@@ -1849,7 +1953,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"_example2.com" is not a valid host',
             ],
-            'port, greater than max by 1' => [
+            'port, greater than max by 1, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1863,7 +1967,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"65536" is not a valid port. Port must be a number between 1 and 65535.',
             ],
-            'port, greater than max within allowed max length' => [
+            'port, greater than max within allowed max length, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1877,7 +1981,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"99999" is not a valid port. Port must be a number between 1 and 65535.',
             ],
-            'port, greater than max' => [
+            'port, greater than max, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1891,7 +1995,18 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"123456" is not a valid port. Port must be a number between 1 and 65535.',
             ],
-            'port, contains non-allowed characters' => [
+            'port, greater than max, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'X-Forwarded-Port' => ['123456'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"123456" is not a valid port. Port must be a number between 1 and 65535.',
+            ],
+            'port, contains non-allowed characters, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1905,7 +2020,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"a1234" is not a valid port. Port must be a number between 1 and 65535.',
             ],
-            'port, less than min by 1' => [
+            'port, less than min by 1, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [

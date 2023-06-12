@@ -251,22 +251,22 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return null;
     }
 
-    private function assertNonEmpty(
-        mixed $value,
-        string $name,
-        string $expeptionClassName = InvalidArgumentException::class,
-    ): void
+    private function assertNonEmpty(mixed $value, string $name, bool $inRuntime = false): void
     {
-        if (empty($value)) {
-            throw new $expeptionClassName("$name can't be empty.");
+        if (!empty($value)) {
+            return;
         }
+
+        $expeptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
+
+        throw new $expeptionClassName("$name can't be empty.");
     }
 
     private function assertExactKeysForArray(
         array $allowedKeys,
         array $array,
         string $name,
-        string $expeptionClassName = InvalidArgumentException::class,
+        bool $inRuntime = false,
     ): void
     {
         if (array_keys($array) === $allowedKeys) {
@@ -275,6 +275,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
         $allowedKeysStr = implode('", "', $allowedKeys);
         $message = "Invalid array keys for $name. The allowed and required keys are: \"$allowedKeysStr\".";
+        $expeptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
 
         throw new $expeptionClassName($message);
     }
@@ -282,22 +283,18 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-assert non-empty-string $value
      */
-    private function assertIsNonEmptyString(
-        mixed $value,
-        string $name,
-        string $expeptionClassName = InvalidArgumentException::class,
-    ): void
+    private function assertIsNonEmptyString(mixed $value, string $name, bool $inRuntime = false): void
     {
-        if (!is_string($value) || $value === '') {
-            throw new $expeptionClassName("$name must be non-empty string.");
+        if (is_string($value) && $value !== '') {
+            return;
         }
+
+        $expeptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
+
+        throw new $expeptionClassName("$name must be non-empty string.");
     }
 
-    private function assertIsAllowedProtocol(
-        mixed $value,
-        string $name,
-        string $expeptionClassName = InvalidArgumentException::class,
-    ): void
+    private function assertIsAllowedProtocol(mixed $value, string $name, bool $inRuntime = false): void
     {
         $this->assertIsNonEmptyString($value, $name);
 
@@ -307,6 +304,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
         $allowedProtocolsStr = implode('", "', self::ALLOWED_PROTOCOLS);
         $message = "$name must be a valid protocol. Allowed values are: \"$allowedProtocolsStr\" (case-sensitive).";
+        $expeptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
 
         throw new $expeptionClassName($message);
     }
@@ -433,7 +431,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             $this->assertIsAllowedProtocol(
                 $protocol,
                 'Value returned from callable for protocol header',
-                RuntimeException::class,
+                inRuntime: true,
             );
         }
 
@@ -600,21 +598,12 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             return;
         }
 
-        $this->assertNonEmpty($ipData, 'Reverse-obfuscated IP data', RuntimeException::class);
-        $this->assertExactKeysForArray([0, 1], $ipData, 'reverse-obfuscated IP data', RuntimeException::class);
-        $this->assertIsNonEmptyString(
-            $ipData[0],
-            'IP returned from reverse-obfuscated IP data',
-            RuntimeException::class,
-        );
+        $this->assertNonEmpty($ipData, 'Reverse-obfuscated IP data', inRuntime: true);
+        $this->assertExactKeysForArray([0, 1], $ipData, 'reverse-obfuscated IP data', inRuntime: true);
+        $this->assertIsNonEmptyString($ipData[0], 'IP returned from reverse-obfuscated IP data', inRuntime: true);
 
         if ($ipData[1] !== null) {
-            // TODO: Allow int too?
-            $this->assertIsNonEmptyString(
-                $ipData[1],
-                'Port returned from reverse-obfuscated IP data',
-                RuntimeException::class,
-            );
+            $this->assertIsNonEmptyString($ipData[1], 'Port returned from reverse-obfuscated IP data', inRuntime: true);
         }
     }
 

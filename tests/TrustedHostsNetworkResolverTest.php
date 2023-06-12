@@ -1995,17 +1995,6 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"123456" is not a valid port. Port must be a number between 1 and 65535.',
             ],
-            'port, greater than max, headers with "X" prefix' => [
-                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
-                $this->createRequest(
-                    headers: [
-                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
-                        'X-Forwarded-Port' => ['123456'],
-                    ],
-                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-                ),
-                '"123456" is not a valid port. Port must be a number between 1 and 65535.',
-            ],
             'port, contains non-allowed characters, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
@@ -2033,6 +2022,17 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 '"0" is not a valid port. Port must be a number between 1 and 65535.',
+            ],
+            'port, greater than max, headers with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'X-Forwarded-Port' => ['123456'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"123456" is not a valid port. Port must be a number between 1 and 65535.',
             ],
         ];
     }

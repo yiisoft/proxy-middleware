@@ -131,24 +131,28 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         $this->assertNonEmpty($headerGroups, 'Forwarded header groups');
 
         $allowedHeaderGroupKeys = ['ip', 'protocol', 'host', 'port'];
-        foreach ($headerGroups as $index => $headerGroup) {
-            if (is_array($headerGroup)) {
+        $validatedHeaderGroups = [];
+        foreach ($headerGroups as $headerGroup) {
+            if ($headerGroup === self::FORWARDED_HEADER_GROUP_RFC) {
+                $validatedHeaderGroups[] = $headerGroup;
+            } elseif (is_array($headerGroup)) {
                 $this->assertNonEmpty($headerGroup, 'Forwarded header group array');
                 $this->assertExactKeysForArray($allowedHeaderGroupKeys, $headerGroup, 'forwarded header group');
 
+                $validatedHeaderGroup = [];
                 foreach (['ip', 'host', 'port'] as $key) {
                     $this->assertIsNonEmptyString($headerGroup[$key], "Header name for \"$key\"");
-                    $headerGroups[$index][$key] = $this->normalizeHeaderName($headerGroup[$key]);
+                    $validatedHeaderGroup[$key] = $this->normalizeHeaderName($headerGroup[$key]);
                 }
 
                 if (is_string($headerGroup['protocol'])) {
                     $this->assertNonEmpty($headerGroup['protocol'], 'Header name for "protocol"');
-                    $headerGroups[$index]['protocol'] = $this->normalizeHeaderName($headerGroup['protocol']);
+                    $validatedHeaderGroup['protocol'] = $this->normalizeHeaderName($headerGroup['protocol']);
                 } elseif (is_array($headerGroup['protocol'])) {
                     $this->assertNonEmpty($headerGroup['protocol'], 'Protocol header config array');
                     $this->assertExactKeysForArray([0, 1], $headerGroup['protocol'], 'protocol header config');
                     $this->assertIsNonEmptyString($headerGroup['protocol'][0], 'Header name for "protocol"');
-                    $headerGroups[$index]['protocol'][0] = $this->normalizeHeaderName($headerGroup['protocol'][0]);
+                    $headerName = $this->normalizeHeaderName($headerGroup['protocol'][0]);
 
                     if (is_array($headerGroup['protocol'][1])) {
                         $this->assertNonEmpty($headerGroup['protocol'][1], 'Values in mapping for protocol header');
@@ -163,14 +167,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
                         throw new InvalidArgumentException($message);
                     }
+
+                    $validatedHeaderGroup['protocol'] = [$headerName, $headerGroup['protocol'][1]];
                 } else {
                     throw new InvalidArgumentException('Protocol header config must be either a string or an array.');
                 }
 
-                continue;
-            }
+                /** @psalm-var SeparateForwardedHeaderGroup $validatedHeaderGroup */
 
-            if ($headerGroup !== self::FORWARDED_HEADER_GROUP_RFC) {
+                $validatedHeaderGroups[] = $validatedHeaderGroup;
+            } else {
                 $message = 'Forwarded header group must be either an associative array or '.
                     'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.';
 
@@ -179,8 +185,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         }
 
         $new = clone $this;
-        /** @psalm-var ForwardedHeaderGroups forwardedHeaderGroups */
-        $new->forwardedHeaderGroups = $headerGroups;
+        $new->forwardedHeaderGroups = $validatedHeaderGroups;
         return $new;
     }
 

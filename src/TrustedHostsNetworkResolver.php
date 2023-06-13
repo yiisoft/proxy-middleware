@@ -18,21 +18,31 @@ use Yiisoft\Validator\Rule\Ip;
 use Yiisoft\Validator\ValidatorInterface;
 
 /**
- * Trusted hosts network resolver can set IP, protocol, host, URL, and port based on trusted headers such as
- * `Forward` or `X-Forwarded-Host` coming from trusted hosts you define. Usually these are load balancers.
- *
- * Make sure that the trusted host always overwrites or removes user-defined headers
- * to avoid security issues.
+ * @psalm-type ProtocolResolvingMapping = array<non-empty-string, TrustedHostsNetworkResolver::PROTOCOL_*>
+ * @psalm-type ProtocolResolvingCallable = Closure(non-empty-string): ?non-empty-string
+ * @psalm-type ProtocolConfig = lowercase-string | array{0: lowercase-string, 1: ProtocolResolvingMapping | ProtocolResolvingCallable}
+ * @psalm-type SeparateForwardedHeaderGroup = array{
+ *     ip: lowercase-string,
+ *     protocol: ProtocolConfig,
+ *     host: lowercase-string,
+ *     port: lowercase-string,
+ * }
+ * @psalm-type ForwardedHeaderGroups = list<TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC | SeparateForwardedHeaderGroup>
  *
  * @psalm-type RawConnectionChainItem = array{
- *     ip: ?string,
- *     protocol: ?string,
- *     host: ?string,
- *     port: ?string,
- *     ipIdentifier: ?string,
- *     wasIpValidated: bool
+ *     ip: ?non-empty-string,
+ *     protocol: ?TrustedHostsNetworkResolver::PROTOCOL_*,
+ *     host: ?non-empty-string,
+ *     port: ?int,
+ *     ipIdentifier: ?non-empty-string,
  * }
- * @psalm-type ProtocolHeadersData = array<string, array<non-empty-string, array<array-key, string>>|callable>
+ * @psalm-type ConnectionChainItem = array{
+ *     ip: non-empty-string,
+ *     protocol: ?TrustedHostsNetworkResolver::PROTOCOL_*,
+ *     host: ?non-empty-string,
+ *     port: ?int,
+ *     ipIdentifier: ?non-empty-string,
+ * }
  */
 class TrustedHostsNetworkResolver implements MiddlewareInterface
 {
@@ -48,9 +58,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         self::FORWARDED_HEADER_GROUP_RFC,
         self::FORWARDED_HEADER_GROUP_X_PREFIX,
     ];
-    /**
-     * List of headers to trust for any trusted host.
-     */
     public const TYPICAL_FORWARDED_HEADERS = [
         // RFC
         'forwarded',
@@ -64,37 +71,55 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         // Microsoft
         'front-end-https',
     ];
-    /**
-     * Name of the request attribute holding IP address resolved from connection chain.
-     */
+
     public const ATTRIBUTE_REQUEST_CLIENT_IP = 'requestClientIp';
 
     private const ALLOWED_RFC_HEADER_DIRECTIVES = ['by', 'for', 'proto', 'host'];
-    private const ALLOWED_PROTOCOLS = ['http', 'https'];
+
+    private const PROTOCOL_HTTP = 'http';
+    private const PROTOCOL_HTTPS = 'https';
+    private const ALLOWED_PROTOCOLS = [self::PROTOCOL_HTTP, self::PROTOCOL_HTTPS];
 
     private const PORT_MIN = 1;
     private const PORT_MAX = 65535;
 
-    private array $trustedIps = [];
+    /**
+     * @psalm-var list<non-empty-string>
+     * @psalm-suppress PropertyNotSetInConstructor
+     */
+    private array $trustedIps;
+    /**
+     * @psalm-var ForwardedHeaderGroups
+     */
     private array $forwardedHeaderGroups = self::DEFAULT_FORWARDED_HEADER_GROUPS;
+    /**
+     * @psalm-var list<lowercase-string>
+     */
     private array $typicalForwardedHeaders = self::TYPICAL_FORWARDED_HEADERS;
+    /**
+     * @psalm-var ?non-empty-string
+     */
     private ?string $connectionChainItemsAttribute = null;
 
     public function __construct(private ValidatorInterface $validator)
     {
     }
 
-    public function withTrustedIps(array $trustedIps): self {
+    public function withTrustedIps(array $trustedIps): self
+    {
         $this->assertNonEmpty($trustedIps, 'Trusted IPs');
 
-        foreach ($trustedIps as $host) {
-            if (!$this->checkIp($host)) {
-                throw new InvalidArgumentException("\"$host\" is not a valid IP.");
+        $validatedIps = [];
+        foreach ($trustedIps as $ip) {
+            if (!$this->checkIp($ip)) {
+                throw new InvalidArgumentException("\"$ip\" is not a valid IP.");
             }
+
+            $validatedIps[] = $ip;
         }
 
         $new = clone $this;
-        $new->trustedIps = $trustedIps;
+        $new->trustedIps = $validatedIps;
 
         return $new;
     }
@@ -152,6 +177,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         }
 
         $new = clone $this;
+        /** @psalm-var ForwardedHeaderGroups forwardedHeaderGroups */
         $new->forwardedHeaderGroups = $headerGroups;
         return $new;
     }
@@ -171,14 +197,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $new;
     }
 
-    /**
-     * Returns a new instance with the specified request's attribute name to which middleware writes validated and
-     * trusted connection chain items.
-     *
-     * @param string|null $attribute The request attribute name.
-     */
     public function withConnectionChainItemsAttribute(?string $attribute): self
     {
+        // TODO: Use assert.
         if ($attribute === '') {
             throw new InvalidArgumentException('Attribute can\'t be empty string.');
         }
@@ -227,7 +248,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
         $port = $connectionChainItem['port'];
         if ($port !== null) {
-            $uri = $uri->withPort((int) $port);
+            $uri = $uri->withPort($port);
         }
 
         $request = $request
@@ -238,6 +259,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
+     * @psalm-param non-empty-string $ipIdentifier
+     * @psalm-param list<ConnectionChainItem> $validatedConnectionChainItems
+     * @psalm-param list<RawConnectionChainItem> $remainingConnectionChainItems
+     *
      * @see parseProxiesFromRfcHeader()
      * @link https://tools.ietf.org/html/rfc7239#section-6.2
      * @link https://tools.ietf.org/html/rfc7239#section-6.3
@@ -251,7 +276,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return null;
     }
 
-    private function assertNonEmpty(mixed $value, string $name, bool $inRuntime = false): void
+    /**
+     * @psalm-param non-empty-string $name
+     */
+    private function assertNonEmpty(string|array $value, string $name, bool $inRuntime = false): void
     {
         if (!empty($value)) {
             return;
@@ -262,6 +290,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         throw new $expeptionClassName("$name can't be empty.");
     }
 
+    /**
+     * @psalm-param list<int | string> $allowedKeys
+     * @psalm-param non-empty-string $name
+     */
     private function assertExactKeysForArray(
         array $allowedKeys,
         array $array,
@@ -282,6 +314,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
     /**
      * @psalm-assert non-empty-string $value
+     * @psalm-param non-empty-string $name
      */
     private function assertIsNonEmptyString(mixed $value, string $name, bool $inRuntime = false): void
     {
@@ -294,6 +327,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         throw new $expeptionClassName("$name must be non-empty string.");
     }
 
+    /**
+     * @psalm-assert TrustedHostsNetworkResolver::PROTOCOL_* $value
+     * @psalm-param non-empty-string $name
+     */
     private function assertIsAllowedProtocol(mixed $value, string $name, bool $inRuntime = false): void
     {
         $this->assertIsNonEmptyString($value, $name);
@@ -330,6 +367,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $request;
     }
 
+    /**
+     * @psalm-return list<lowercase-string>
+     */
     private function getTrustedForwardedHeaders(): array
     {
         $headers = [];
@@ -349,50 +389,51 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $headers;
     }
 
+    /**
+     * @psalm-return lowercase-string
+     */
     private function normalizeHeaderName(string $headerName): string
     {
         return strtolower($headerName);
     }
 
+    /**
+     * @psalm-param non-empty-string $remoteAddr
+     *
+     * @psalm-return list<RawConnectionChainItem>
+     */
     private function getConnectionChainItems(string $remoteAddr, ServerRequestInterface $request): array
     {
-        $items = [
-            [
-                'ip' => $remoteAddr,
-                'protocol' => null,
-                'host' => null,
-                'port' => null,
-                'ipIdentifier' => null,
-                'wasIpValidated' => false,
-            ],
-        ];
+        $items = [$this->getConnectionChainItem(ip: $remoteAddr)];
         foreach ($this->forwardedHeaderGroups as $forwardedHeaderGroup) {
             if ($forwardedHeaderGroup === self::FORWARDED_HEADER_GROUP_RFC) {
-                if (!$request->hasHeader(self::FORWARDED_HEADER_RFC)) {
+                /** @psalm-var list<string> $forwardedHeaderValue */
+                $forwardedHeaderValue = $request->getHeader(self::FORWARDED_HEADER_RFC);
+                if (empty($forwardedHeaderValue) || empty($request->getHeaderLine(self::FORWARDED_HEADER_RFC))) {
                     continue;
                 }
 
-                $forwardedHeaderValue = $request->getHeader(self::FORWARDED_HEADER_RFC);
                 $items = [...$items, ...array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue))];
 
                 break;
             }
 
-            if (!$request->hasHeader($forwardedHeaderGroup['ip'])) {
+            /** @psalm-var list<string> $forwardedHeaderValue */
+            $forwardedHeaderValue = $request->getHeader($forwardedHeaderGroup['ip']);
+            if (empty($forwardedHeaderValue) || empty($request->getHeaderLine($forwardedHeaderGroup['ip']))) {
                 continue;
             }
 
             $items = [];
-            $requestIps = array_merge([$remoteAddr], array_reverse($request->getHeader($forwardedHeaderGroup['ip'])));
+            $requestIps = array_merge([$remoteAddr], array_reverse($forwardedHeaderValue));
             foreach ($requestIps as $requestIp) {
-                $items[] = [
-                    'ip' => $requestIp,
-                    'protocol' => $this->getProtocolFromSeparateHeader($request, $forwardedHeaderGroup['protocol']),
-                    'host' => $request->getHeaderLine($forwardedHeaderGroup['host']) ?: null,
-                    'port' => $request->getHeaderLine($forwardedHeaderGroup['port']) ?: null,
-                    'ipIdentifier' => null,
-                    'wasIpValidated' => false,
-                ];
+                $items[] = $this->getConnectionChainItem(
+                    ip: $requestIp,
+                    protocol: $this->getProtocolFromSeparateHeader($request, $forwardedHeaderGroup['protocol']),
+                    host: $request->getHeaderLine($forwardedHeaderGroup['host']) ?: null,
+                    port: $request->getHeaderLine($forwardedHeaderGroup['port']) ?: null,
+                    validateProtocol: !is_array($forwardedHeaderGroup['protocol']),
+                );
             }
 
             break;
@@ -401,9 +442,12 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $items;
     }
 
+    /**
+     * @psalm-param ProtocolConfig $configValue
+     */
     private function getProtocolFromSeparateHeader(
         ServerRequestInterface $request,
-        string|array|callable $configValue,
+        string|array $configValue,
     ): ?string
     {
         if (is_string($configValue)) {
@@ -435,10 +479,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             );
         }
 
+        // TODO: Add validation flag.
+
         return $protocol;
     }
 
     /**
+     * @psalm-param list<string> $proxyItems
+     *
+     * @psalm-return list<RawConnectionChainItem>
+     *
      * @link https://tools.ietf.org/html/rfc7239
      */
     private function parseProxiesFromRfcHeader(array $proxyItems): array
@@ -496,19 +546,79 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $ipIdentifier = null;
             }
 
-            $proxies[] = [
-                'ip' => $ip,
-                'protocol' => $directiveMap['proto'] ?? null,
-                'host' => $directiveMap['host'] ?? null,
-                'port' => $port,
-                'ipIdentifier' => $ipIdentifier,
-                'wasIpValidated' => $wasIpValidated,
-            ];
+            $proxies[] = $this->getConnectionChainItem(
+                ip: $ip,
+                protocol: $directiveMap['proto'] ?? null,
+                host: $directiveMap['host'] ?? null,
+                port: $port,
+                ipIdentifier: $ipIdentifier,
+                validateIp: !$wasIpValidated,
+            );
         }
 
         return $proxies;
     }
 
+    /**
+     * @psalm-return RawConnectionChainItem
+     */
+    private function getConnectionChainItem(
+        ?string $ip = null,
+        ?string $protocol = null,
+        ?string $host = null,
+        ?string $port = null,
+        ?string $ipIdentifier = null,
+        bool $validateIp = true,
+        bool $validateProtocol = true,
+    ): array
+    {
+        if ($ip !== null && $validateIp && !$this->checkIp($ip)) {
+            throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP.");
+        }
+
+        if ($protocol !== null && $validateProtocol && !$this->checkProtocol($protocol)) {
+            $allowedProtocolsStr = implode('", "', self::ALLOWED_PROTOCOLS);
+            $message = "\"$protocol\" protocol is not allowed. Allowed values are: \"$allowedProtocolsStr\" " .
+                '(case-sensitive).';
+
+            throw new InvalidConnectionChainItemException($message);
+        }
+
+        if ($host !== null && !$this->checkHost($host)) {
+            throw new InvalidConnectionChainItemException("\"$host\" is not a valid host.");
+        }
+
+        if ($port !== null && !$this->checkPort($port)) {
+            $portMin = self::PORT_MIN;
+            $portMax = self::PORT_MAX;
+            $message = "\"$port\" is not a valid port. Port must be a number between $portMin and $portMax.";
+
+            throw new InvalidConnectionChainItemException($message);
+        }
+
+        /**
+         * @psalm-var ?non-empty-string $ip
+         * @psalm-var ?TrustedHostsNetworkResolver::PROTOCOL_* $protocol
+         * @psalm-var ?non-empty-string $host
+         * @psalm-var ?string $port
+         * @psalm-var ?non-empty-string $ipIdentifier
+         */
+        return [
+            'ip' => $ip,
+            'protocol' => $protocol,
+            'host' => $host,
+            'port' => $port !== null ? (int) $port : $port,
+            'ipIdentifier' => $ipIdentifier,
+        ];
+    }
+
+    /**
+     * @psalm-param list<RawConnectionChainItem> $items
+     * @psalm-param list<ConnectionChainItem> $validatedItems
+     * @psalm-param-out list<ConnectionChainItem> $validatedItems
+     *
+     * @psalm-return ConnectionChainItem
+     */
     private function iterateConnectionChainItems(
         array $items,
         array &$validatedItems,
@@ -545,53 +655,30 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             }
 
             $ip = $rawItem['ip'];
-            if ($ip !== null && !$rawItem['wasIpValidated'] && !$this->checkIp($ip)) {
-                throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP.");
+            if ($ip === null) {
+                break;
             }
 
-            $protocol = $rawItem['protocol'];
-            if ($protocol !== null && !$this->checkProtocol($protocol)) {
-                $allowedProtocolsStr = implode('", "', self::ALLOWED_PROTOCOLS);
-                $message = "\"$protocol\" protocol is not allowed. Allowed values are: \"$allowedProtocolsStr\" " .
-                    '(case-sensitive).';
+            /** @psalm-var ConnectionChainItem $rawItem */
 
-                throw new InvalidConnectionChainItemException($message);
-            }
-
-            $host = $rawItem['host'];
-            if ($host !== null && !$this->checkHost($host)) {
-                throw new InvalidConnectionChainItemException("\"$host\" is not a valid host.");
-            }
-
-            $port = $rawItem['port'];
-            if ($port !== null) {
-                if (!$this->checkPort($port)) {
-                    $portMin = self::PORT_MIN;
-                    $portMax = self::PORT_MAX;
-                    $message = "\"$port\" is not a valid port. Port must be a number between $portMin and $portMax.";
-
-                    throw new InvalidConnectionChainItemException($message);
-                }
-
-                $rawItem['port'] = (int) $port;
-            }
-
-            if ($proxiesCount >= 3 && $ip !== null) {
+            if ($proxiesCount >= 3) {
                 $item = $rawItem;
             }
 
-            if ($ip === null || !$this->checkTrustedIp($ip)) {
+            if (!$this->checkTrustedIp($ip)) {
                 break;
             }
 
             $item = $rawItem;
-            unset($item['wasIpValidated']);
             $validatedItems[] = $item;
         } while (count($remainingItems) > 0);
 
         return $item;
     }
 
+    /**
+     * @psalm-assert ?array{0: non-empty-string, 1: ?non-empty-string} $ipData
+     */
     private function assertReverseObfuscatedIpData(?array $ipData): void
     {
         if ($ipData === null) {
@@ -602,11 +689,24 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         $this->assertExactKeysForArray([0, 1], $ipData, 'reverse-obfuscated IP data', inRuntime: true);
         $this->assertIsNonEmptyString($ipData[0], 'IP returned from reverse-obfuscated IP data', inRuntime: true);
 
-        if ($ipData[1] !== null) {
-            $this->assertIsNonEmptyString($ipData[1], 'Port returned from reverse-obfuscated IP data', inRuntime: true);
+        if (!$this->checkIp($ipData[0])) {
+            throw new RuntimeException('IP returned from reverse-obfuscated IP data is not valid.');
+        }
+
+        if ($ipData[1] === null) {
+            return;
+        }
+
+        $this->assertIsNonEmptyString($ipData[1], 'Port returned from reverse-obfuscated IP data', inRuntime: true);
+
+        if (!$this->checkPort($ipData[1])) {
+            throw new RuntimeException('Port returned from reverse-obfuscated IP data is not valid.');
         }
     }
 
+    /**
+     * @psalm-assert non-empty-string $value
+     */
     private function checkIp(string $value): bool
     {
         return $this
@@ -615,6 +715,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             ->isValid();
     }
 
+    /**
+     * @psalm-assert non-empty-string $value
+     */
     private function checkIpv6(string $value): bool
     {
         return $this
@@ -623,21 +726,33 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             ->isValid();
     }
 
+    /**
+     * @psalm-param non-empty-string $value
+     */
     private function checkTrustedIp(string $value): bool
     {
         return (new Ip(ranges: $this->trustedIps))->isAllowed($value);
     }
 
+    /**
+     * @psalm-assert TrustedHostsNetworkResolver::PROTOCOL_* $value
+     */
     private function checkProtocol(string $value): bool
     {
         return in_array($value, self::ALLOWED_PROTOCOLS);
     }
 
+    /**
+     * @psalm-assert non-empty-string $value
+     */
     private function checkHost(string $value): bool
     {
         return filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
     }
 
+    /**
+     * @psalm-assert non-empty-string $value
+     */
     private function checkPort(string $value): bool
     {
         /**
@@ -655,6 +770,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $intValue >= self::PORT_MIN && $intValue <= self::PORT_MAX;
     }
 
+    /**
+     * @psalm-assert non-empty-string $value
+     */
     private function checkIpIdentifier(string $value): bool
     {
         return $value === 'unknown' || preg_match('/_[\w.-]+$/', $value) !== 0;

@@ -26,6 +26,14 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 [],
                 'Trusted IPs can\'t be empty.',
             ],
+            'contains not a string' => [
+                ['8.8.8.8', 1, '18.18.18.18'],
+                'Trusted IP must be non-empty string.',
+            ],
+            'contains empty string' => [
+                ['8.8.8.8', '', '18.18.18.18'],
+                'Trusted IP must be non-empty string.',
+            ],
             'contains invalid IP' => [
                 ['8.8.8.8', 'invalid2.2.2.2', '18.18.18.18'],
                 '"invalid2.2.2.2" is not a valid IP.',
@@ -390,7 +398,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
         $middleware = $this->createMiddleware();
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Attribute can\'t be empty string');
+        $this->expectExceptionMessage('Attribute can\'t be empty.');
         $middleware->withConnectionChainItemsAttribute('');
     }
 

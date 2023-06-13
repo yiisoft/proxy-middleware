@@ -111,6 +111,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
         $validatedIps = [];
         foreach ($trustedIps as $ip) {
+            $this->assertIsNonEmptyString($ip, 'Trusted IP');
+
             if (!$this->checkIp($ip)) {
                 throw new InvalidArgumentException("\"$ip\" is not a valid IP.");
             }
@@ -199,10 +201,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
     public function withConnectionChainItemsAttribute(?string $attribute): self
     {
-        // TODO: Use assert.
-        if ($attribute === '') {
-            throw new InvalidArgumentException('Attribute can\'t be empty string.');
+        if (is_string($attribute)) {
+            $this->assertNonEmpty($attribute, 'Attribute');
         }
+
+        /** @var ?non-empty-string $attribute */
 
         $new = clone $this;
         $new->connectionChainItemsAttribute = $attribute;

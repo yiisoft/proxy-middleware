@@ -743,7 +743,21 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
-            'forwarded headers are empty' => [
+            'RFC header, empty' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: ['Forwarded' => ''],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => null,
+                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                ],
+            ],
+            'headers with "X" prefix, empty' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
@@ -1057,6 +1071,51 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                         'X-Forwarded-Proto' => ['http'],
                         'X-Forwarded-Host' => ['example4.com'],
                         'X-Forwarded-Port' => ['8084'],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => 'http',
+                                'host' => 'example1.com',
+                                'port' => 8081,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example2.com',
+                    'port' => 8082,
+                ],
+            ],
+            'headers with "X" prefix, not in request, priority over RFC header, IP related data' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withForwardedHeaderGroups([
+                        TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
+                        TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
                     ],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
@@ -2348,7 +2407,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'IP returned from reverse-obfuscated IP data must be non-empty string.',
             ],
-            'Port is empty string' => [
+            'port is empty string' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2373,6 +2432,32 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 'Port returned from reverse-obfuscated IP data must be non-empty string.',
+            ],
+            'valid port instead of IP and invalid port' => [
+                (new class (new Validator()) extends TrustedHostsNetworkResolver
+                {
+                    protected function reverseObfuscateIpIdentifier(
+                        string $ipIdentifier,
+                        array $validatedConnectionChainItems,
+                        array $remainingConnectionChainItems,
+                        RequestInterface $request,
+                    ): ?array
+                    {
+                        return ['8082', '0'];
+                    }
+                })
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'Port returned from reverse-obfuscated IP data is not valid.',
             ],
         ];
     }

@@ -443,8 +443,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                     validateProtocol: !is_array($forwardedHeaderGroup['protocol']),
                 );
             }
-
-            break;
         }
 
         return $items;
@@ -531,7 +529,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $port = null;
                 $ipIdentifier = $directiveMap['for'];
             } else {
-                if (preg_match('/^\[(?<ip>.+)](?::(?<port>\d{1,5}+))?$/', $directiveMap['for'], $matches)) {
+                if (preg_match('/\[(?<ip>.+)](?::(?<port>\d{1,5}+))?/', $directiveMap['for'], $matches)) {
                     $ip = $matches['ip'];
                     if (!$this->checkIpv6($ip)) {
                         $message = "Enclosing in square brackets assumes presence of valid IPv6, \"$ip\" given.";
@@ -655,10 +653,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $this->assertReverseObfuscatedIpData($ipData);
                 if ($ipData !== null) {
                     $rawItem['ip'] = $ipData[0];
-
-                    if ($ipData[1] !== null) {
-                        $rawItem['port'] = $ipData[1];
-                    }
+                    $rawItem['port'] = $ipData[1];
                 }
             }
 
@@ -697,18 +692,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         $this->assertExactKeysForArray([0, 1], $ipData, 'reverse-obfuscated IP data', inRuntime: true);
         $this->assertIsNonEmptyString($ipData[0], 'IP returned from reverse-obfuscated IP data', inRuntime: true);
 
+        if ($ipData[1] !== null) {
+            $this->assertIsNonEmptyString($ipData[1], 'Port returned from reverse-obfuscated IP data', inRuntime: true);
+
+            if (!$this->checkPort($ipData[1])) {
+                throw new RuntimeException('Port returned from reverse-obfuscated IP data is not valid.');
+            }
+        }
+
         if (!$this->checkIp($ipData[0])) {
             throw new RuntimeException('IP returned from reverse-obfuscated IP data is not valid.');
-        }
-
-        if ($ipData[1] === null) {
-            return;
-        }
-
-        $this->assertIsNonEmptyString($ipData[1], 'Port returned from reverse-obfuscated IP data', inRuntime: true);
-
-        if (!$this->checkPort($ipData[1])) {
-            throw new RuntimeException('Port returned from reverse-obfuscated IP data is not valid.');
         }
     }
 
@@ -763,19 +756,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function checkPort(string $value): bool
     {
-        /**
-         * @infection-ignore-all
-         * - PregMatchRemoveCaret.
-         * - PregMatchRemoveDollar.
-         */
-        if (preg_match('/^\d{1,5}$/', $value) !== 1) {
+        if (preg_match('/\d{1,5}/', $value) !== 1) {
             return false;
         }
 
-        /** @infection-ignore-all CastInt */
-        $intValue = (int) $value;
-
-        return $intValue >= self::PORT_MIN && $intValue <= self::PORT_MAX;
+        return $value >= self::PORT_MIN && $value <= self::PORT_MAX;
     }
 
     /**

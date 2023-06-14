@@ -499,6 +499,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function parseProxiesFromRfcHeader(array $proxyItems): array
     {
+        $forPattern = '/^(?:(?<ipv4>[^:\[\]]+)|(?:\[(?<ipv6>.+)]))(?::(?<port>\d{1,5}+))?$/';
         $proxies = [];
         foreach ($proxyItems as $proxyItem) {
             try {
@@ -529,26 +530,32 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 $port = null;
                 $ipIdentifier = $directiveMap['for'];
             } else {
-                if (preg_match('/\[(?<ip>.+)](?::(?<port>\d{1,5}+))?/', $directiveMap['for'], $matches)) {
-                    $ip = $matches['ip'];
+                if (preg_match($forPattern, $directiveMap['for'], $matches) === 0) {
+                    $message = 'Contents of "for" directive is invalid.';
+
+                    throw new RfcProxyParseException($message);
+                }
+
+                if (isset($matches['ipv6']) && !empty($matches['ipv6'])) {
+                    $ip = $matches['ipv6'];
+
                     if (!$this->checkIpv6($ip)) {
                         $message = "Enclosing in square brackets assumes presence of valid IPv6, \"$ip\" given.";
 
                         throw new RfcProxyParseException($message);
                     }
 
-                    $port = $matches['port'] ?? null;
+                    /** @infection-ignore-all TrueValue */
                     $wasIpValidated = true;
                 } else {
-                    $ipData = explode(':', $directiveMap['for'], 2);
-                    $ip = $ipData[0];
+                    $ip = $matches['ipv4'];
+
                     if ($ip === '') {
                         throw new RfcProxyParseException('IP is missing in "for" directive.');
                     }
-
-                    $port = $ipData[1] ?? null;
                 }
 
+                $port = $matches['port'] ?? null;
                 $ipIdentifier = null;
             }
 
@@ -756,10 +763,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function checkPort(string $value): bool
     {
-        if (preg_match('/\d{1,5}/', $value) !== 1) {
-            return false;
-        }
-
         return $value >= self::PORT_MIN && $value <= self::PORT_MAX;
     }
 
@@ -768,6 +771,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function checkIpIdentifier(string $value): bool
     {
-        return $value === 'unknown' || preg_match('/_[\w.-]+$/', $value) !== 0;
+        return $value === 'unknown' || preg_match('/^_[\w.-]+$/', $value) !== 0;
     }
 }

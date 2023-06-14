@@ -1925,7 +1925,28 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
-                'IP is missing in "for" directive.',
+                'Contents of "for" directive is invalid.',
+            ],
+            'IPv6, not exact match, RFC header' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps([
+                        '2001:db8:3333:4444:5555:6666:7777:8888',
+                        '2001:db8:3333:4444:5555:6666:7777:2222',
+                        '2001:db8:3333:4444:5555:6666:7777:0000'
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="[2001:db8:3333:4444:5555:6666:7777:9999]";proto=http;host=example3.com',
+                            'for="1[2001:db8:3333:4444:5555:6666:7777:5555]2";proto=https;host=example2.com',
+                            'for="[2001:db8:3333:4444:5555:6666:7777:2222]";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '2001:db8:3333:4444:5555:6666:7777:0000'],
+                ),
+                'Contents of "for" directive is invalid.',
             ],
             'not IPv6 enclosed in square brackets' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
@@ -1940,6 +1961,34 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 'Enclosing in square brackets assumes presence of valid IPv6, "5.5.5.5" given.',
+            ],
+            'port, contains non-allowed characters, RFC header' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:a1234";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'Contents of "for" directive is invalid.',
+            ],
+            'port, greater than max, RFC header' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host=example2.com',
+                            'for="2.2.2.2:123456";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'Contents of "for" directive is invalid.',
             ],
         ];
     }
@@ -2075,6 +2124,20 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"_obfuscated:8082" is not a valid IP.',
             ],
+            'IP identifier, obfuscated, not exact match, RFC header' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="test_obfuscated";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"test_obfuscated" is not a valid IP.',
+            ],
             'protocol, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
@@ -2152,34 +2215,6 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 '"99999" is not a valid port. Port must be a number between 1 and 65535.',
-            ],
-            'port, greater than max, RFC header' => [
-                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
-                $this->createRequest(
-                    headers: [
-                        'Forwarded' => [
-                            'for="9.9.9.9:8083";proto=http;host=example3.com',
-                            'for="5.5.5.5:8082";proto=https;host=example2.com',
-                            'for="2.2.2.2:123456";proto=http;host=example1.com',
-                        ],
-                    ],
-                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-                ),
-                '"123456" is not a valid port. Port must be a number between 1 and 65535.',
-            ],
-            'port, contains non-allowed characters, RFC header' => [
-                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
-                $this->createRequest(
-                    headers: [
-                        'Forwarded' => [
-                            'for="9.9.9.9:8083";proto=http;host=example3.com',
-                            'for="5.5.5.5:8082";proto=https;host=example2.com',
-                            'for="2.2.2.2:a1234";proto=http;host=example1.com',
-                        ],
-                    ],
-                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-                ),
-                '"a1234" is not a valid port. Port must be a number between 1 and 65535.',
             ],
             'port, less than min by 1, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
@@ -2381,7 +2416,33 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Invalid array keys for reverse-obfuscated IP data. The allowed and required keys are: "0", "1".',
             ],
-            'IP is empty string' => [
+            'IP: not a string' => [
+                (new class (new Validator()) extends TrustedHostsNetworkResolver
+                {
+                    protected function reverseObfuscateIpIdentifier(
+                        string $ipIdentifier,
+                        array $validatedConnectionChainItems,
+                        array $remainingConnectionChainItems,
+                        RequestInterface $request,
+                    ): ?array
+                    {
+                        return [1, '8081'];
+                    }
+                })
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'IP returned from reverse-obfuscated IP data must be non-empty string.',
+            ],
+            'IP: empty string' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2407,7 +2468,33 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'IP returned from reverse-obfuscated IP data must be non-empty string.',
             ],
-            'port is empty string' => [
+            'IP: invalid' => [
+                (new class (new Validator()) extends TrustedHostsNetworkResolver
+                {
+                    protected function reverseObfuscateIpIdentifier(
+                        string $ipIdentifier,
+                        array $validatedConnectionChainItems,
+                        array $remainingConnectionChainItems,
+                        RequestInterface $request,
+                    ): ?array
+                    {
+                        return ['invalid5.5.5.5', '8081'];
+                    }
+                })
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="_obfuscated";proto=https;host=example2.com',
+                            'for="2.2.2.2:8081";proto=http;host=example1.com',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                'IP returned from reverse-obfuscated IP data is not valid.',
+            ],
+            'port: empty string' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2433,7 +2520,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Port returned from reverse-obfuscated IP data must be non-empty string.',
             ],
-            'valid port instead of IP and invalid port' => [
+            'IP: valid port instead of IP, port: invalid' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(

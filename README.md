@@ -61,9 +61,9 @@ $response = $middleware->process($request, $handler);
 
 ### `TrustedHostsNetworkResolver`
 
-Scans the entire connection chain and resolves the data from taking into account configured forwarded headers and 
-trusted IPs. Additionally, all items' structure is thoroughly validated because headers' data can't be trusted. The 
-following data is resolved:
+Scans the entire connection chain and resolves the data from forwarded headers taking into account trusted IPs.
+Additionally, all items' structure is thoroughly validated because headers' data can't be trusted. The following data is 
+resolved:
 
 - IP.
 - Protocol

@@ -61,58 +61,243 @@ $response = $middleware->process($request, $handler);
 
 ### `TrustedHostsNetworkResolver`
 
-Trusted hosts network resolver can set IP, protocol, host, URL, and port based on trusted headers such as
-`Forward` or `X-Forwarded-Host` coming from trusted hosts you define. Usually these are load balancers.
+Scans the entire connection chain and resolves the data from taking into account configured forwarded headers and 
+trusted IPs. Additionally, all items' structure is thoroughly validated because headers' data can't be trusted. The 
+following data is resolved:
 
-Make sure that the trusted host always overwrites or removes user-defined headers to avoid security issues.
+- IP.
+- Protocol
+- Host.
+- Port.
+- IP identifier - [unknown](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2) or 
+[obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2). Used with `Forwarded` RFC header. 
+
+The typical use case is load balancers.
+
+#### Trusted IPs
+
+A list of trusted IPs from connection chain.
+
+This is the only requirement, the rest of the settings are optional. Trusted IPs must contain the value in
+`$_SERVER['REMOTE_ADDR']`. For example, for `18.18.18.18` server's remote address and 2 trusted proxies - `2.2.2.2` and 
+`8.8.8.8`, the configuration will be: 
 
 ```php
-/**
- * @var Psr\Http\Message\ServerRequestInterface $request
- * @var Psr\Http\Server\RequestHandlerInterface $handler
- * @var Yiisoft\Yii\Middleware\TrustedHostsNetworkResolver $middleware
- */
-
-$middleware = $middleware->withAddedTrustedHosts(
-    // List of secure hosts including `$_SERVER['REMOTE_ADDR']`. You can specify IPv4, IPv6, domains, and aliases.
-    hosts: ['1.1.1.1', '2.2.2.1/3', '2001::/32', 'localhost'],
-    // IP list headers. Headers containing many sub-elements (e.g. RFC 7239) must also be listed for other relevant
-    // types (such as host headers), otherwise they will only be used as an IP list.
-    ipHeaders: ['x-forwarded-for', [TrustedHostsNetworkResolver::IP_HEADER_TYPE_RFC7239, 'forwarded']],
-    // Protocol headers with accepted protocols and corresponding header values. Matching is case-insensitive.
-    protocolHeaders: ['x-forwarded-proto' => ['https' => 'on']],
-    // List of headers containing HTTP host.
-    hostHeaders: ['forwarded', 'x-forwarded-for'],
-    // List of headers containing HTTP URL.
-    urlHeaders: ['x-rewrite-url'],
-    // List of headers containing port number.
-    portHeaders:['x-rewrite-port'],
-    // List of trusted headers. For untrusted hosts, middleware removes these from the request.
-    trustedHeaders: ['x-forwarded-for', 'forwarded'],
-);
-// Disable earlier settings:
-$middleware = $middleware->withoutTrustedHosts();
-
-$response = $middleware->process($request, $handler);
+/** @var Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withTrustedIps([['8.8.8.8', '2.2.2.2', '18.18.18.18']]);
 ```
 
-Additionally, you can specify the following options:
+The order of IPs is not important.
+
+#### Forwarded header groups
+
+Header groups to parse the data from. By including headers in this list, they are trusted automatically.
+
+The default is:
 
 ```php
-/**
- * Specify a request attribute name to which middleware writes trusted path data.
- * 
- * @var Yiisoft\Yii\Middleware\TrustedHostsNetworkResolver $middleware
- * @var string|null $attribute
- */
-$middleware = $middleware->withAttributeIps($attribute);
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
 
-/**
- * Specify client IP validator.
- * 
- * @var Yiisoft\Validator\ValidatorInterface $validator
- */
-$middleware = $middleware->withValidator($validator);
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withForwardedHeaderGroups([    
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,           
+]);
+```
+
+which is an alternative/shorter way of writing this:
+
+```php
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withForwardedHeaderGroups([    
+    'forwarded',
+    [
+        'ip' => 'x-forwarded-for',
+        'protocol' => 'x-forwarded-proto',
+        'host' => 'x-forwarded-host',
+        'port' => 'x-forwarded-port',    
+    ],           
+]);
+```
+
+The accepted values are:
+
+- `TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC` string constant. Parse all data from single `Forwarded` 
+header according to [RFC 7239](https://datatracker.ietf.org/doc/html/rfc7239).
+- Array. Parse data from separate forwarded headers with "X" prefix. Unlike with RFC variation, each header stores only
+one data unit (for example, IP). Headers with "X" prefix are quite common despite being non-standard:
+  - [X-Forwarded-For](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For) - IP.
+  - [X-Forwarded-Proto](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto) - protocol.
+  - [X-Forwarded-Host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) - host.
+  - `X-Forwarded-Port` - port.
+
+The header groups are processed in the order they are defined. If the header containing IP is present and non-empty, 
+this group will be selected and further ones - ignored.
+
+You can add support for custom headers and/or change priority:
+
+```php
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withForwardedHeaderGroups([    
+    [
+        'ip' => 'y-forwarded-for',
+        'protocol' => 'y-forwarded-proto',
+        'host' => 'y-forwarded-host',
+        'port' => 'y-forwarded-port',    
+    ],
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,    
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,               
+]);
+```
+
+For protocol, it's also possible to resolve non-standard values via mapping:
+
+```php
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withForwardedHeaderGroups([
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,    
+    [
+        'ip' => 'y-forwarded-for',
+        'protocol' => [
+            'front-end-https', 
+            ['on' => 'https'],
+        ],
+        'host' => 'y-forwarded-host',
+        'port' => 'y-forwarded-port',    
+    ],
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,               
+]);
+```
+
+or via callable:
+
+```php
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withForwardedHeaderGroups([
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,    
+    [
+        'ip' => 'y-forwarded-for',
+        'protocol' => [
+            'front-end-https', 
+            static fn (string $protocol): ?string => $protocol === 'On' ? 'https': 'http',,
+        ],
+        'host' => 'y-forwarded-host',
+        'port' => 'y-forwarded-port',    
+    ],
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,               
+]);
+```
+
+It's also a good idea to limit default header groups to the only guaranteed sources of data:
+
+```php
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withForwardedHeaderGroups([    
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,           
+]);
+```
+
+#### Typical forwarded headers
+
+List of headers that are considered related to forwarding.
+
+The default is:
+
+```php
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withTypicalForwardedHeaders([
+    // RFC
+    'forwarded',
+
+    // "X" prefix
+    'x-forwarded-for',
+    'x-forwarded-host',
+    'x-forwarded-proto',
+    'x-forwarded-port',
+
+    // Microsoft
+    'front-end-https',
+]);
+```
+
+The headers that are present in this list but missing in forwarded header groups will be deleted from request for 
+security reasons.
+
+For example, with only RFC header allowed as forwarded header group:
+
+```php
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withForwardedHeaderGroups([
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
+]);
+```
+
+middleware will remove these headers from request:
+
+- `x-forwarded-for`.
+- `x-forwarded-host`.
+- `x-forwarded-proto`.
+- `x-forwarded-port`.
+- `front-end-https`.
+
+#### Accessing resolved data
+
+Resolved IP is saved to a special request's attribute:
+
+```php
+use Psr\Http\Message\ServerRequestInterface;
+
+/** @var ServerRequestInterface $request */
+$ip = $request->getAttribute(TrustedHostsNetworkResolver::ATTRIBUTE_REQUEST_CLIENT_IP);
+```
+
+There is an additional attribute allowing to retrieve all previous validated and trusted connection chain items. It 
+needs explicit configuration:
+
+```php
+use Psr\Http\Message\ServerRequestInterface;
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
+$middleware = $middleware->withConnectionChainItemsAttribute('connectionChainItems');
+// ...
+/** @var ServerRequestInterface $request */
+$connectionChainItems = $request->getAttribute('connectionChainItems');
+``` 
+
+An example of contents:
+
+```php
+[
+    [
+        'ip' => '18.18.18.18',
+        'protocol' => null,
+        'host' => null,
+        'port' => null,
+        'ipIdentifier' => null,
+    ],
+    [
+        'ip' => '2.2.2.2',
+        'protocol' => 'http',
+        'host' => 'example1.com',
+        'port' => null,
+        'ipIdentifier' => '_SEVKISEK',
+    ]
+],
 ```
 
 ## Testing

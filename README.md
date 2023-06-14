@@ -302,6 +302,31 @@ An example of contents:
 ],
 ```
 
+#### Reverse-obfuscating IP identifier
+
+You may extend middleware class and provide reverse-obfuscating logic For [obfuscated] IP identifiers:
+
+```php
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+class MyTrustedHostsNetworkResolver extends TrustedHostsNetworkResolver
+{
+    protected function reverseObfuscateIpIdentifier(
+        string $ipIdentifier,
+        array $validatedConnectionChainItems,
+        array $remainingConnectionChainItems,
+        RequestInterface $request,
+    ): ?array
+    {
+        return match ($ipIdentifier) {
+            '_obfuscated1' => ['2.2.2.2', null],
+            '_obfuscated2' => ['5.5.5.5', '8082'],
+            default => null,
+        };
+    }
+}
+```
+
 ## Testing
 
 ### Unit testing

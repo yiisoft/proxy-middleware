@@ -83,7 +83,9 @@ This is the only requirement, the rest of the settings are optional. Trusted IPs
 `8.8.8.8`, the configuration will be: 
 
 ```php
-/** @var Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver $middleware */
+use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
+
+/** @var TrustedHostsNetworkResolver $middleware */
 $middleware = $middleware->withTrustedIps([['8.8.8.8', '2.2.2.2', '18.18.18.18']]);
 ```
 

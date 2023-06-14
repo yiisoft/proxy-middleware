@@ -297,7 +297,7 @@ An example of contents:
         'protocol' => 'http',
         'host' => 'example1.com',
         'port' => null,
-        'ipIdentifier' => '_SEVKISEK',
+        'ipIdentifier' => '_obfuscated1',
     ]
 ],
 ```

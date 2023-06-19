@@ -78,9 +78,9 @@ The typical use case is having an application behind a load balancer.
 
 A list of trusted IPs from connection chain.
 
-This is the only requirement, the rest of the settings are optional. Besides proxies' IPs, this list must contain the 
-IP of a client that passes through a proxy as well (can be retrieved using `$_SERVER['REMOTE_ADDR']`). For example, for 
-a client with IP address `18.18.18.18` and 2 trusted proxies - `2.2.2.2` and `8.8.8.8`, the configuration will be: 
+This is the only required setting, the rest are optional. Besides proxies' IPs, this list must include the IP of a 
+client that passes through a proxy as well (can be retrieved using `$_SERVER['REMOTE_ADDR']`). For example, for a client 
+with IP address `18.18.18.18` and 2 trusted proxies - `2.2.2.2` and `8.8.8.8`, the configuration will be: 
 
 ```php
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;

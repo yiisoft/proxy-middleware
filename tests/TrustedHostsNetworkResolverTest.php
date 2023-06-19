@@ -418,10 +418,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
         $this->assertNotSame($middleware, $middleware->withConnectionChainItemsAttribute('connectionChainItems'));
     }
 
-    public function dataWithTypicalForwardedHeaders(): array
+    public function dataWithTypicalForwardedHeaders(): iterable
     {
         return [
-            'default' => [
+            yield 'default' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -473,7 +473,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'custom, string keys are ignored' => [
+            yield 'custom, string keys are ignored' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -533,7 +533,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'custom, case-insensitive' => [
+            yield 'custom, case-insensitive' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -593,7 +593,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'custom, case-insensitive, protocol array' => [
+            yield 'custom, case-insensitive, protocol array' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -689,10 +689,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
         }
     }
 
-    public function dataProcess(): array
+    public function dataProcess(): iterable
     {
         return [
-            'neither remote addr, nor forwarded headers are set' => [
+            yield 'neither remote addr, nor forwarded headers are set' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
@@ -703,7 +703,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
-            'remote addr not set' => [
+            yield 'remote addr not set' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
@@ -716,7 +716,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
-            'remote addr is empty' => [
+            yield 'remote addr is empty' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
@@ -730,7 +730,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
-            'forwarded headers not set' => [
+            yield 'forwarded headers not set' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
@@ -743,7 +743,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
-            'RFC header, empty' => [
+            yield 'RFC header, empty' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
@@ -757,7 +757,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
-            'headers with "X" prefix, empty' => [
+            yield 'headers with "X" prefix, empty' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
@@ -771,7 +771,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'connectionChainItemsAttribute' => ['connectionChainItems', null],
                 ],
             ],
-            'neither remote addr, nor proxies from request are in trusted IPs' => [
+            yield 'neither remote addr, nor proxies from request are in trusted IPs' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
@@ -786,7 +786,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ],
             ],
 
-            'RFC header, in request, remote addr in trusted IPs' => [
+            yield 'RFC header, in request, remote addr in trusted IPs' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
@@ -811,7 +811,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'headers with "X" prefix, in request, remote addr in trusted IPs' => [
+            yield 'headers with "X" prefix, in request, remote addr in trusted IPs' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
@@ -836,7 +836,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'forwarded headers are not in request, remote addr in trusted IPs' => [
+            yield 'forwarded headers are not in request, remote addr in trusted IPs' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
@@ -860,7 +860,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'RFC header, remote addr and first proxy from request in trusted IPs, header is not allowed' => [
+            yield 'RFC header, remote addr and first proxy from request in trusted IPs, header is not allowed' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -886,7 +886,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'headers with "X" prefix, remote addr and first proxy from request in trusted IPs, header is not allowed' => [
+            yield 'headers with "X" prefix, remote addr and first proxy from request in trusted IPs, header is not allowed' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -912,7 +912,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'RFC header, remote addr and first proxy from request in trusted IPs' => [
+            yield 'RFC header, remote addr and first proxy from request in trusted IPs' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -944,7 +944,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'headers with "X" prefix, remote addr and first proxy from request in trusted IPs' => [
+            yield 'headers with "X" prefix, remote addr and first proxy from request in trusted IPs' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -976,7 +976,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'RFC header, remote addr and first 2 proxies from request in trusted IPs' => [
+            yield 'RFC header, remote addr and first 2 proxies from request in trusted IPs' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
@@ -1015,7 +1015,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ],
                 ],
             ],
-            'headers with "X" prefix, remote addr and first 2 proxies from request in trusted IPs' => [
+            yield 'headers with "X" prefix, remote addr and first 2 proxies from request in trusted IPs' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
@@ -1055,7 +1055,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ],
             ],
 
-            'RFC header, priority over headers with "X" prefix, IP related data' => [
+            yield 'RFC header, priority over headers with "X" prefix, IP related data' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1100,7 +1100,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8082,
                 ],
             ],
-            'headers with "X" prefix, not in request, priority over RFC header, IP related data' => [
+            yield 'headers with "X" prefix, not in request, priority over RFC header, IP related data' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1145,7 +1145,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8082,
                 ],
             ],
-            'RFC header, priority over headers with "X" prefix, IP related data, IPv6 without port' => [
+            yield 'RFC header, priority over headers with "X" prefix, IP related data, IPv6 without port' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps([
@@ -1190,7 +1190,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => null,
                 ],
             ],
-            'RFC header, priority over headers with "X" prefix, IP related data, IPv6 with port' => [
+            yield 'RFC header, priority over headers with "X" prefix, IP related data, IPv6 with port' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps([
@@ -1235,7 +1235,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8082,
                 ],
             ],
-            'headers with "X" prefix, RFC header not in request, IP related data' => [
+            yield 'headers with "X" prefix, RFC header not in request, IP related data' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1275,7 +1275,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
-            'custom headers, highest priority, IP related data' => [
+            yield 'custom headers, highest priority, IP related data' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1334,7 +1334,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8030,
                 ],
             ],
-            'custom headers, IP related data, protocol mapping' => [
+            yield 'custom headers, IP related data, protocol mapping' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1382,7 +1382,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
-            'custom headers, IP related data, protocol mapping, protocol header not set' => [
+            yield 'custom headers, IP related data, protocol mapping, protocol header not set' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1429,7 +1429,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
-            'custom headers, IP related data, protocol mapping, protocol header is empty' => [
+            yield 'custom headers, IP related data, protocol mapping, protocol header is empty' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1477,7 +1477,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
-            'custom headers, IP related data, protocol resolving via callable' => [
+            yield 'custom headers, IP related data, protocol resolving via callable' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1528,7 +1528,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8080,
                 ],
             ],
-            'RFC header, IP related data, string keys in trusted IPs and forwarded header groups are ignored' => [
+            yield 'RFC header, IP related data, string keys in trusted IPs and forwarded header groups are ignored' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['key3' => '8.8.8.8', 'key2' => '2.2.2.2', 'key1' => '18.18.18.18'])
@@ -1573,7 +1573,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8082,
                 ],
             ],
-            'RFC header, IP related data, case-insensitive' => [
+            yield 'RFC header, IP related data, case-insensitive' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1614,7 +1614,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8082,
                 ],
             ],
-            'RFC header, IP related data, min allowed port' => [
+            yield 'RFC header, IP related data, min allowed port' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1655,7 +1655,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 1,
                 ],
             ],
-            'RFC header, IP related data, max allowed port' => [
+            yield 'RFC header, IP related data, max allowed port' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1696,7 +1696,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 65535,
                 ],
             ],
-            'RFC header, IP related data, hidden IP, unknown' => [
+            yield 'RFC header, IP related data, hidden IP, unknown' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1737,7 +1737,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8081,
                 ],
             ],
-            'RFC header, IP related data, hidden IP, obfuscated, no reverse-obfuscating' => [
+            yield 'RFC header, IP related data, hidden IP, obfuscated, no reverse-obfuscating' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -1778,7 +1778,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     'port' => 8081,
                 ],
             ],
-            'RFC header, IP related data, hidden IP, obfuscated, reverse-obfuscating' => [
+            yield 'RFC header, IP related data, hidden IP, obfuscated, reverse-obfuscating' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -1868,10 +1868,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
         $this->assertSame($expectedData['port'] ?? null, $uri->getPort());
     }
 
-    public function dataRfcProxyParseException(): array
+    public function dataRfcProxyParseException(): iterable
     {
         return [
-            'badly formed header value, no double quotes for IP with port' => [
+            yield 'badly formed header value, no double quotes for IP with port' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1885,7 +1885,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Unable to parse RFC header value: "for=5.5.5.5:8082;proto=https;host=example2.com".',
             ],
-            'missing "for" directive' => [
+            yield 'missing "for" directive' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1899,7 +1899,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"for" directive is required.',
             ],
-            'contains non-allowed directive' => [
+            yield 'contains non-allowed directive' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1913,7 +1913,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"test" is not a valid directive. Allowed values are: "by", "for", "proto", "host" (case-insensitive).',
             ],
-            'invalid "for" directive' => [
+            yield 'invalid "for" directive' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1927,7 +1927,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Contents of "for" directive is invalid.',
             ],
-            'IPv6, not exact match, RFC header' => [
+            yield 'IPv6, not exact match, RFC header' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps([
@@ -1948,7 +1948,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Contents of "for" directive is invalid.',
             ],
-            'not IPv6 enclosed in square brackets' => [
+            yield 'not IPv6 enclosed in square brackets' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1962,7 +1962,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Enclosing in square brackets assumes presence of valid IPv6, "5.5.5.5" given.',
             ],
-            'port, contains non-allowed characters, RFC header' => [
+            yield 'port, contains non-allowed characters, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -1976,7 +1976,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Contents of "for" directive is invalid.',
             ],
-            'port, greater than max, RFC header' => [
+            yield 'port, greater than max, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2009,10 +2009,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
         $middleware->process($request, $requestHandler);
     }
 
-    public function dataInvalidConnectionChainItemException(): array
+    public function dataInvalidConnectionChainItemException(): iterable
     {
         return [
-            'IP, remote addr' => [
+            yield 'IP, remote addr' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2022,7 +2022,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"invalid18.18.18.18" is not a valid IP.',
             ],
-            'IP, RFC header' => [
+            yield 'IP, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2036,7 +2036,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"invalid5.5.5.5" is not a valid IP.',
             ],
-            'IP, headers with "X" prefix' => [
+            yield 'IP, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2046,7 +2046,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"invalid5.5.5.5" is not a valid IP.',
             ],
-            'IP with port, headers with "X" prefix' => [
+            yield 'IP with port, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2056,7 +2056,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"5.5.5.5:8082" is not a valid IP.',
             ],
-            'IP identifier, unknown, headers with "X" prefix' => [
+            yield 'IP identifier, unknown, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2066,7 +2066,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"unknown" is not a valid IP.',
             ],
-            'IP identifier, obfuscated, headers with "X" prefix' => [
+            yield 'IP identifier, obfuscated, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2076,7 +2076,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"_obfuscated" is not a valid IP.',
             ],
-            'IP identifier with port, unknown, RFC header' => [
+            yield 'IP identifier with port, unknown, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2090,7 +2090,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"unknown" is not a valid IP.',
             ],
-            'IP identifier with port, unknown, headers with "X" prefix' => [
+            yield 'IP identifier with port, unknown, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2100,7 +2100,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"unknown:8082" is not a valid IP.',
             ],
-            'IP identifier with port, obfuscated, RFC header' => [
+            yield 'IP identifier with port, obfuscated, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2114,7 +2114,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"_obfuscated" is not a valid IP.',
             ],
-            'IP identifier with port, obfuscated, headers with "X" prefix' => [
+            yield 'IP identifier with port, obfuscated, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2124,7 +2124,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"_obfuscated:8082" is not a valid IP.',
             ],
-            'IP identifier, obfuscated, not exact match, RFC header' => [
+            yield 'IP identifier, obfuscated, not exact match, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2138,7 +2138,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"test_obfuscated" is not a valid IP.',
             ],
-            'protocol, RFC header' => [
+            yield 'protocol, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2152,7 +2152,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"https1" protocol is not allowed. Allowed values are: "http", "https" (case-sensitive).',
             ],
-            'protocol, headers with "X" prefix' => [
+            yield 'protocol, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2163,7 +2163,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"https1" protocol is not allowed. Allowed values are: "http", "https" (case-sensitive).',
             ],
-            'host, RFC header' => [
+            yield 'host, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2177,7 +2177,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"_example2.com" is not a valid host',
             ],
-            'host, headers with "X" prefix' => [
+            yield 'host, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2188,7 +2188,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"_example2.com" is not a valid host',
             ],
-            'port, greater than max by 1, RFC header' => [
+            yield 'port, greater than max by 1, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2202,7 +2202,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"65536" is not a valid port. Port must be a number between 1 and 65535.',
             ],
-            'port, greater than max within allowed max length, RFC header' => [
+            yield 'port, greater than max within allowed max length, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2216,7 +2216,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"99999" is not a valid port. Port must be a number between 1 and 65535.',
             ],
-            'port, less than min by 1, RFC header' => [
+            yield 'port, less than min by 1, RFC header' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2230,7 +2230,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 '"0" is not a valid port. Port must be a number between 1 and 65535.',
             ],
-            'port, greater than max, headers with "X" prefix' => [
+            yield 'port, greater than max, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(
                     headers: [
@@ -2260,10 +2260,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
         $middleware->process($request, $requestHandler);
     }
 
-    public function dataGetProtocolException(): array
+    public function dataGetProtocolException(): iterable
     {
         return [
-            'mapping, no matching item' => [
+            yield 'mapping, no matching item' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -2289,7 +2289,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Unable to resolve "On" protocol via mapping.',
             ],
-            'callable, return value is null' => [
+            yield 'callable, return value is null' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -2315,7 +2315,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Unable to resolve "On" protocol via callable.',
             ],
-            'callable, return value is not a valid protocol' => [
+            yield 'callable, return value is not a valid protocol' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -2361,10 +2361,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
         $middleware->process($request, $requestHandler);
     }
 
-    public function dataReverseObfuscateIpIdentifierException(): array
+    public function dataReverseObfuscateIpIdentifierException(): iterable
     {
         return [
-            'empty array' => [
+            yield 'empty array' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2390,7 +2390,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Reverse-obfuscated IP data can\'t be empty.',
             ],
-            'wrong items count' => [
+            yield 'wrong items count' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2416,7 +2416,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Invalid array keys for reverse-obfuscated IP data. The allowed and required keys are: "0", "1".',
             ],
-            'IP: not a string' => [
+            yield 'IP: not a string' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2442,7 +2442,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'IP returned from reverse-obfuscated IP data must be non-empty string.',
             ],
-            'IP: empty string' => [
+            yield 'IP: empty string' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2468,7 +2468,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'IP returned from reverse-obfuscated IP data must be non-empty string.',
             ],
-            'IP: invalid' => [
+            yield 'IP: invalid' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2494,7 +2494,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'IP returned from reverse-obfuscated IP data is not valid.',
             ],
-            'port: empty string' => [
+            yield 'port: empty string' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(
@@ -2520,7 +2520,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 ),
                 'Port returned from reverse-obfuscated IP data must be non-empty string.',
             ],
-            'IP: valid port instead of IP, port: invalid' => [
+            yield 'IP: valid port instead of IP, port: invalid' => [
                 (new class (new Validator()) extends TrustedHostsNetworkResolver
                 {
                     protected function reverseObfuscateIpIdentifier(

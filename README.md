@@ -72,7 +72,7 @@ resolved:
 - IP identifier - [unknown](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2) or 
 [obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2). Used with `Forwarded` RFC header. 
 
-The typical use case is load balancers.
+The typical use case is having an application behind a load balancer.
 
 #### Trusted IPs
 

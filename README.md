@@ -304,7 +304,7 @@ An example of contents:
 
 #### Reverse-obfuscating IP identifier
 
-You may extend middleware class and provide reverse-obfuscating logic For [obfuscated] IP identifiers:
+You may extend middleware class and provide reverse-obfuscating logic for [obfuscated] IP identifiers:
 
 ```php
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;

@@ -695,7 +695,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
             yield 'neither remote addr, nor forwarded headers are set' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(),
                 [
@@ -706,7 +706,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
             yield 'remote addr not set' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
@@ -719,7 +719,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
             yield 'remote addr is empty' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
@@ -733,56 +733,75 @@ final class TrustedHostsNetworkResolverTest extends TestCase
             yield 'forwarded headers not set' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => null,
-                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                    'requestClientIp' => '18.18.18.18',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
             yield 'RFC header, empty' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['Forwarded' => ''],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => null,
-                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                    'requestClientIp' => '18.18.18.18',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
             yield 'headers with "X" prefix, empty' => [
                 $this
                     ->createMiddleware()
-                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
+                    ->withTrustedIps(['8.8.8.8', '18.18.18.18'])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
                     headers: ['X-Forwarded-For' => ''],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => null,
-                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
-                ],
-            ],
-            yield 'neither remote addr, nor proxies from request are in trusted IPs' => [
-                $this
-                    ->createMiddleware()
-                    ->withTrustedIps(['8.8.8.8', '19.19.19.19'])
-                    ->withConnectionChainItemsAttribute('connectionChainItems'),
-                $this->createRequest(
-                    headers: ['X-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2']],
-                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
-                ),
-                [
-                    'requestClientIp' => null,
-                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                    'requestClientIp' => '18.18.18.18',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
 

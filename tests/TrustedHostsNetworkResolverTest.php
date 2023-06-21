@@ -515,7 +515,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => '18.18.18.18',
+                    'requestClientIp' => '1.1.1.1',
                     'removedHeaders' => [
                         'Front-End-Https',
                     ],
@@ -575,7 +575,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => '18.18.18.18',
+                    'requestClientIp' => '1.1.1.1',
                     'removedHeaders' => [
                         'Front-End-Https',
                     ],
@@ -815,7 +815,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => '18.18.18.18',
+                    'requestClientIp' => '2.2.2.2',
                     'connectionChainItemsAttribute' => [
                         'connectionChainItems',
                         [
@@ -840,7 +840,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => '18.18.18.18',
+                    'requestClientIp' => '2.2.2.2',
                     'connectionChainItemsAttribute' => [
                         'connectionChainItems',
                         [

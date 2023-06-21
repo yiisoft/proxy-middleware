@@ -671,7 +671,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             /** @psalm-var ConnectionChainItem $rawItem */
 
-            if ($proxiesCount >= 3) {
+            if ($proxiesCount >= 2) {
                 $item = $rawItem;
             }
 

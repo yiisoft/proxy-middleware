@@ -430,7 +430,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                     continue;
                 }
 
-                $items = [...$items, ...array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue))];
+                $items = [$items[0], ...array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue))];
 
                 break;
             }

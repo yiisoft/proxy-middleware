@@ -234,10 +234,10 @@ $middleware = $middleware->withTypicalForwardedHeaders([
 ]);
 ```
 
-The headers that are present in this list but missing in forwarded header groups will be deleted from request for 
-security reasons.
+The headers that are present in this list but missing in matching forwarded header group will be deleted from request 
+because they are potentially not secure and likely were not passed by proxy server.
 
-For example, with only RFC header allowed as forwarded header group:
+For example, with default forwarded header groups' setup used as well:
 
 ```php
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
@@ -245,7 +245,26 @@ use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
 /** @var TrustedHostsNetworkResolver $middleware */
 $middleware = $middleware->withForwardedHeaderGroups([
     TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
+    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
 ]);
+```
+
+and with the following request headers passed:
+
+```php
+[
+    'Forwarded' => [
+        'for="9.9.9.9:8013";proto=http;host=example13.com',
+        'for="8.8.8.8:8012";proto=http;host=example12.com',
+        'for="2.2.2.2:8011";proto=http;host=example11.com',
+    ],
+    'X-Forwarded-For' => 'not-secure',
+    'X-Forwarded-Host' => 'not-secure',
+    'X-Forwarded-Proto' => 'not-secure',
+    'X-Forwarded-Port' => 'not-secure',
+    'Front-End-Https' => 'not-secure',
+    'Non-Forwarded' => 'not-typical',
+];
 ```
 
 middleware will remove these headers from request:
@@ -255,6 +274,9 @@ middleware will remove these headers from request:
 - `x-forwarded-proto`.
 - `x-forwarded-port`.
 - `front-end-https`.
+
+because RFC group is matching and the rest can't be trusted. The headers that are not declared as typical forwarded 
+headers will be left as is (`Non-Forwarded` in the example above).
 
 #### Accessing resolved data
 

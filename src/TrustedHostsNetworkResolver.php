@@ -27,7 +27,8 @@ use Yiisoft\Validator\ValidatorInterface;
  *     host: lowercase-string,
  *     port: lowercase-string,
  * }
- * @psalm-type ForwardedHeaderGroups = list<TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC | SeparateForwardedHeaderGroup>
+ * @psalm-type ForwardedHeaderGroup = TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC | SeparateForwardedHeaderGroup
+ * @psalm-type ForwardedHeaderGroups = non-empty-list<ForwardedHeaderGroup>
  *
  * @psalm-type RawConnectionChainItem = array{
  *     ip: ?non-empty-string,
@@ -130,6 +131,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
         $this->assertNonEmpty($headerGroups, 'Forwarded header groups');
 
+        /** @psalm-var non-empty-array $headerGroups */
+
         $allowedHeaderGroupKeys = ['ip', 'protocol', 'host', 'port'];
         $validatedHeaderGroups = [];
         foreach ($headerGroups as $headerGroup) {
@@ -225,9 +228,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             return $this->handleNotTrusted($request, $handler);
         }
 
-        $request = $this->filterTypicalForwardedHeaders($request);
+        [$forwardedHeaderGroup, $connectionChainItems] = $this->getConnectionChainItems($remoteAddr, $request);
+        $request = $this->filterTypicalForwardedHeaders($forwardedHeaderGroup, $request);
 
-        $connectionChainItems = $this->getConnectionChainItems($remoteAddr, $request);
         $validatedConnectionChainItems = [];
         $connectionChainItem = $this->iterateConnectionChainItems(
             $connectionChainItems,
@@ -365,9 +368,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $handler->handle($request->withAttribute(self::ATTRIBUTE_REQUEST_CLIENT_IP, null));
     }
 
-    private function filterTypicalForwardedHeaders(ServerRequestInterface $request): ServerRequestInterface
+    /**
+     * @psalm-param ForwardedHeaderGroup $forwardedHeaderGroup
+     */
+    private function filterTypicalForwardedHeaders(
+        string|array $forwardedHeaderGroup,
+        ServerRequestInterface $request,
+    ): ServerRequestInterface
     {
-        $headers = array_diff($this->typicalForwardedHeaders, $this->getTrustedForwardedHeaders());
+        $forwardedHeaders = $this->getForwardedHeadersFromGroup($forwardedHeaderGroup);
+        $headers = array_diff($this->typicalForwardedHeaders, $forwardedHeaders);
         foreach ($headers as $header) {
             $request = $request->withoutHeader($header);
         }
@@ -376,22 +386,21 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
+     * @psalm-param ForwardedHeaderGroup $group
+     *
      * @psalm-return list<lowercase-string>
      */
-    private function getTrustedForwardedHeaders(): array
+    private function getForwardedHeadersFromGroup(string|array $group): array
     {
         $headers = [];
-        foreach ($this->forwardedHeaderGroups as $headerGroup) {
-            if (is_string($headerGroup)) {
-                $headers[] = $headerGroup;
 
-                continue;
-            }
-
-            $headers[] = $headerGroup['ip'];
-            $headers[] = is_string($headerGroup['protocol']) ? $headerGroup['protocol'] : $headerGroup['protocol'][0];
-            $headers[] = $headerGroup['host'];
-            $headers[] = $headerGroup['port'];
+        if (is_string($group)) {
+            $headers[] = $group;
+        } else {
+            $headers[] = $group['ip'];
+            $headers[] = is_string($group['protocol']) ? $group['protocol'] : $group['protocol'][0];
+            $headers[] = $group['host'];
+            $headers[] = $group['port'];
         }
 
         return $headers;
@@ -408,7 +417,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-param non-empty-string $remoteAddr
      *
-     * @psalm-return list<RawConnectionChainItem>
+     * @psalm-return array{0: ForwardedHeaderGroup, 1: list<RawConnectionChainItem>}
      */
     private function getConnectionChainItems(string $remoteAddr, ServerRequestInterface $request): array
     {
@@ -421,7 +430,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                     continue;
                 }
 
-                $items = [...$items, ...array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue))];
+                $items = array_merge($items, array_reverse($this->parseProxiesFromRfcHeader($forwardedHeaderValue)));
 
                 break;
             }
@@ -443,9 +452,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                     validateProtocol: !is_array($forwardedHeaderGroup['protocol']),
                 );
             }
+
+            break;
         }
 
-        return $items;
+        return [$forwardedHeaderGroup, $items];
     }
 
     /**

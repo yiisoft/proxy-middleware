@@ -457,6 +457,7 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 [
                     'requestClientIp' => '5.5.5.5',
                     'removedHeaders' => [
+                        'Forwarded',
                         'X-Forwarded-For',
                         'X-Forwarded-Proto',
                         'X-Forwarded-Host',
@@ -464,7 +465,6 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                         'Front-End-Https',
                     ],
                     'remainedHeaders' => [
-                        'Forwarded',
                         'Y-Forwarded-For',
                         'Y-Forwarded-Proto',
                         'Y-Forwarded-Host',
@@ -479,20 +479,20 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
                     ->withForwardedHeaderGroups([
                         [
-                            'ip' => 'X-FORWARDED-FOR',
-                            'protocol' => 'X-FORWARDED-PROTO',
-                            'host' => 'X-FORWARDED-HOST',
-                            'port' => 'X-FORWARDED-PORT',
+                            'ip' => 'x-forwarded-for',
+                            'protocol' => 'x-forwarded-proto',
+                            'host' => 'x-forwarded-host',
+                            'port' => 'x-forwarded-port',
                         ],
                         TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC,
                     ])
                     ->withTypicalForwardedHeaders([
-                        'key1' => strtoupper(TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC),
-                        'key2' => 'X-Forwarded-For',
-                        'key3' => 'X-Forwarded-Proto',
-                        'key4' => 'X-Forwarded-Host',
-                        'key5' => 'X-Forwarded-Port',
-                        'key6' => 'Front-End-Https',
+                        'key1' => TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC,
+                        'key2' => 'x-forwarded-for',
+                        'key3' => 'x-forwarded-proto',
+                        'key4' => 'x-forwarded-host',
+                        'key5' => 'x-forwarded-port',
+                        'key6' => 'front-end-https',
                     ]),
                 $this->createRequest(
                     headers: [
@@ -517,10 +517,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 [
                     'requestClientIp' => '1.1.1.1',
                     'removedHeaders' => [
+                        'Forwarded',
                         'Front-End-Https',
                     ],
                     'remainedHeaders' => [
-                        'Forwarded',
                         'X-Forwarded-For',
                         'X-Forwarded-Proto',
                         'X-Forwarded-Host',
@@ -577,10 +577,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 [
                     'requestClientIp' => '1.1.1.1',
                     'removedHeaders' => [
+                        'Forwarded',
                         'Front-End-Https',
                     ],
                     'remainedHeaders' => [
-                        'Forwarded',
                         'X-Forwarded-For',
                         'X-Forwarded-Proto',
                         'X-Forwarded-Host',
@@ -640,10 +640,10 @@ final class TrustedHostsNetworkResolverTest extends TestCase
                 [
                     'requestClientIp' => '5.5.5.5',
                     'removedHeaders' => [
+                        'Forwarded',
                         'Y-Forwarded-Proto',
                     ],
                     'remainedHeaders' => [
-                        'Forwarded',
                         'X-Forwarded-For',
                         'X-Forwarded-Proto',
                         'X-Forwarded-Host',

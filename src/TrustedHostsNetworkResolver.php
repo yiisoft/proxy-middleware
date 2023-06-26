@@ -496,8 +496,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             );
         }
 
-        // TODO: Add validation flag.
-
         return $protocol;
     }
 

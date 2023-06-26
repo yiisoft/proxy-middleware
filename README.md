@@ -327,7 +327,7 @@ An example of contents:
 #### Reverse-obfuscating IP identifier
 
 You may extend middleware class and provide reverse-obfuscating logic for 
-[obfuscated]((https://datatracker.ietf.org/doc/html/rfc7239#section-6.3)) IP identifiers:
+[obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.3) IP identifiers:
 
 ```php
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;

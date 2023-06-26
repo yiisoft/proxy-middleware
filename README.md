@@ -70,7 +70,7 @@ resolved:
 - Host.
 - Port.
 - IP identifier - [unknown](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2) or 
-[obfuscated][https://datatracker.ietf.org/doc/html/rfc7239#section-6.3]. Used with `Forwarded` RFC header. 
+[obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.3). Used with `Forwarded` RFC header. 
 
 The typical use case is having an application behind a load balancer.
 

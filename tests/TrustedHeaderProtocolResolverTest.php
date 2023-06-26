@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Yiisoft\Yii\Middleware\Tests;
+namespace Yiisoft\ProxyMiddleware\Tests;
 
 use HttpSoft\Message\ServerRequest;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 use stdClass;
-use Yiisoft\Yii\Middleware\TrustedHeaderProtocolResolver;
-use Yiisoft\Yii\Middleware\Tests\TestAsset\MockRequestHandler;
+use Yiisoft\ProxyMiddleware\TrustedHeaderProtocolResolver;
+use Yiisoft\ProxyMiddleware\Tests\Support\MockRequestHandler;
 
 final class TrustedHeaderProtocolResolverTest extends TestCase
 {

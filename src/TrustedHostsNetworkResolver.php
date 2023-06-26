@@ -18,6 +18,19 @@ use Yiisoft\Validator\Rule\Ip;
 use Yiisoft\Validator\ValidatorInterface;
 
 /**
+ * Scans the entire connection chain and resolves the data from forwarded headers taking into account trusted IPs.
+ * Additionally, all items' structure is thoroughly validated because headers' data can't be trusted. The following data
+ * is resolved:
+ *
+ * - IP.
+ * - Protocol.
+ * - Host.
+ * - Port.
+ * - IP identifier - [unknown](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2) or
+ * [obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.3). Used with `Forwarded` RFC header.
+ *
+ * The typical use case is having an application behind a load balancer.
+ *
  * @psalm-type ProtocolResolvingMapping = array<non-empty-string, TrustedHostsNetworkResolver::PROTOCOL_*>
  * @psalm-type ProtocolResolvingCallable = Closure(non-empty-string): ?non-empty-string
  * @psalm-type ProtocolConfig = lowercase-string | array{0: lowercase-string, 1: ProtocolResolvingMapping | ProtocolResolvingCallable}
@@ -47,18 +60,41 @@ use Yiisoft\Validator\ValidatorInterface;
  */
 class TrustedHostsNetworkResolver implements MiddlewareInterface
 {
+    /**
+     * The name of forwarded header according to RFC 7239.
+     *
+     * @link https://datatracker.ietf.org/doc/html/rfc7239#section-4
+     */
     public const FORWARDED_HEADER_RFC = 'forwarded';
+    /**
+     * The name of forwarded header group containing forwarded header according to RFC 7239 for including in
+     * {@see $forwardedHeaderGroups}. In this case the group contains only 1 header with all the data -
+     * {@see FORWARDED_HEADER_RFC}.
+     *
+     * @link https://datatracker.ietf.org/doc/html/rfc7239#section-4
+     */
     public const FORWARDED_HEADER_GROUP_RFC = self::FORWARDED_HEADER_RFC;
+    /**
+     * The name of forwarded header group containing headers with "X" prefix for including in
+     * {@see $forwardedHeaderGroups}. In this case, the group contains multiple headers and the data is passed
+     * separately among them.
+     */
     public const FORWARDED_HEADER_GROUP_X_PREFIX = [
         'ip' => 'x-forwarded-for',
         'protocol' => 'x-forwarded-proto',
         'host' => 'x-forwarded-host',
         'port' => 'x-forwarded-port',
     ];
+    /**
+     * Default value for {@see $forwardedHeaderGroups}.
+     */
     public const DEFAULT_FORWARDED_HEADER_GROUPS = [
         self::FORWARDED_HEADER_GROUP_RFC,
         self::FORWARDED_HEADER_GROUP_X_PREFIX,
     ];
+    /**
+     * Default value for {@see $typicalForwardedHeaders}.
+     */
     public const TYPICAL_FORWARDED_HEADERS = [
         // RFC
         'forwarded',
@@ -73,6 +109,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         'front-end-https',
     ];
 
+    /**
+     * The name of request's attribute for storing resolved connection chain item's IP.
+     */
     public const ATTRIBUTE_REQUEST_CLIENT_IP = 'requestClientIp';
 
     private const ALLOWED_RFC_HEADER_DIRECTIVES = ['by', 'for', 'proto', 'host'];
@@ -106,6 +145,15 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
     }
 
+    /**
+     * Returns new instance with changed list of trusted IPs from connection chain.
+     *
+     * @param array $trustedIps List of trusted IPs from connection chain.
+     * @return self New instance.
+     *
+     * @throws InvalidArgumentException When list is empty or contains invalid IPs.
+     * @see https://github.com/yiisoft/proxy-middleware#trusted-ips For detailed explanation and example.
+     */
     public function withTrustedIps(array $trustedIps): self
     {
         $this->assertNonEmpty($trustedIps, 'Trusted IPs');
@@ -127,6 +175,19 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $new;
     }
 
+    /**
+     * Returns new instance with changed list of forwarded header groups to parse the data from. By including headers
+     * in this list, they are trusted automatically.
+     *
+     * The header groups are processed in the order they are defined. If the header containing IP is present and
+     * non-empty, this group will be selected and further ones - ignored.
+     *
+     * @param array $headerGroups List of forwarded header groups.
+     * @return self New instance.
+     *
+     * @throws InvalidArgumentException When the structure/contents of header groups is incorrect.
+     * @see https://github.com/yiisoft/proxy-middleware#forwarded-header-groups For detailed explanation and examples.
+     */
     public function withForwardedHeaderGroups(array $headerGroups): self
     {
         $this->assertNonEmpty($headerGroups, 'Forwarded header groups');
@@ -192,6 +253,19 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $new;
     }
 
+    /**
+     * Returns new instance with changed list of headers that are considered related to forwarding.
+     *
+     * The headers that are present in this list but missing in matching forwarded header group will be deleted from
+     * request because they are potentially not secure and likely were not passed by proxy server.
+     *
+     * @param array $headerNames List of headers that are considered related to forwarding. Header names are
+     * case-insensitive.
+     * @return self New instance.
+     *
+     * @throws InvalidArgumentException When list is empty or header within it is empty.
+     * @see https://github.com/yiisoft/proxy-middleware#typical-forwarded-headers For example.
+     */
     public function withTypicalForwardedHeaders(array $headerNames): self
     {
         $this->assertNonEmpty($headerNames, 'Typical forwarded headers');
@@ -207,6 +281,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $new;
     }
 
+    /**
+     * Returns new instance with changed name of request's attribute for storing validated and trusted connection chain
+     * items.
+     *
+     * @param string|null $attribute The name of request's attribute. Can be set to `null` to disable saving completely.
+     * @return self New instance.
+     *
+     * @throws InvalidArgumentException When attribute name is empty.
+     * @see https://github.com/yiisoft/proxy-middleware#accessing-resolved-data For example.
+     */
     public function withConnectionChainItemsAttribute(?string $attribute): self
     {
         if (is_string($attribute)) {
@@ -220,6 +304,15 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         return $new;
     }
 
+    /**
+     * @inheritdoc
+     *
+     * @throws RuntimeException When value returned from protocol resolving callable in {@see $forwardedHeaderGroups} or
+     * overridden {@see reverseObfuscateIpIdentifier} method is incorrect.
+     * @throws RfcProxyParseException When parsing of {@see FORWARDED_HEADER_RFC} failed.
+     * @throws InvalidConnectionChainItemException When resolved data of connection chain item - either IP, protocol,
+     * host or port is invalid.
+     */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         /** @var string|null $remoteAddr */
@@ -270,13 +363,29 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
+     * A method intended to be overridden in user class for resolving obfuscated IP identifier obtained from
+     * {@see FORWARDED_HEADER_RFC}.
+     *
+     * @param string $ipIdentifier Obfuscated IP identifier.
      * @psalm-param non-empty-string $ipIdentifier
+     *
+     * @param array $validatedConnectionChainItems Connection chain items that are already trusted and passed the
+     * validation.
      * @psalm-param list<ConnectionChainItem> $validatedConnectionChainItems
+     *
+     * @param array $remainingConnectionChainItems Connection chain items that are left to check whether they are valid
+     * and can be trusted.
      * @psalm-param list<RawConnectionChainItem> $remainingConnectionChainItems
      *
-     * @see parseProxiesFromRfcHeader()
-     * @link https://tools.ietf.org/html/rfc7239#section-6.2
+     * @return ?array A list with 2 items where:
+     *
+     * - 1st item is expected to be IP;
+     * - 2nd item is expected to be port (or `null` when there is no port).
+     *
+     * When unable to resolve IP identifier, `null` must be returned.
+     *
      * @link https://tools.ietf.org/html/rfc7239#section-6.3
+     * @see https://github.com/yiisoft/proxy-middleware#reverse-obfuscating-ip-identifier For example.
      */
     protected function reverseObfuscateIpIdentifier(
         string $ipIdentifier,

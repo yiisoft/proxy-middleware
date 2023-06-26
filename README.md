@@ -70,7 +70,7 @@ resolved:
 - Host.
 - Port.
 - IP identifier - [unknown](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2) or 
-[obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2). Used with `Forwarded` RFC header. 
+[obfuscated][https://datatracker.ietf.org/doc/html/rfc7239#section-6.3]. Used with `Forwarded` RFC header. 
 
 The typical use case is having an application behind a load balancer.
 
@@ -326,7 +326,8 @@ An example of contents:
 
 #### Reverse-obfuscating IP identifier
 
-You may extend middleware class and provide reverse-obfuscating logic for [obfuscated] IP identifiers:
+You may extend middleware class and provide reverse-obfuscating logic for 
+[obfuscated]((https://datatracker.ietf.org/doc/html/rfc7239#section-6.3)) IP identifiers:
 
 ```php
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
@@ -341,9 +342,9 @@ class MyTrustedHostsNetworkResolver extends TrustedHostsNetworkResolver
     ): ?array
     {
         return match ($ipIdentifier) {
-            '_obfuscated1' => ['2.2.2.2', null],
-            '_obfuscated2' => ['5.5.5.5', '8082'],
-            default => null,
+            '_obfuscated1' => ['2.2.2.2', null], // Without port
+            '_obfuscated2' => ['5.5.5.5', '8082'], // With port
+            default => null, // Unable to resolve (default)
         };
     }
 }

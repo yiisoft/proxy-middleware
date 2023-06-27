@@ -67,7 +67,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     public const FORWARDED_HEADER_RFC = 'forwarded';
     /**
-     * The name of forwarded header group containing forwarded header according to RFC 7239 for including in
+     * The forwarded header group containing forwarded header according to RFC 7239 for including in
      * {@see $forwardedHeaderGroups}. In this case the group contains only 1 header with all the data -
      * {@see FORWARDED_HEADER_RFC}.
      *
@@ -75,9 +75,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     public const FORWARDED_HEADER_GROUP_RFC = self::FORWARDED_HEADER_RFC;
     /**
-     * The name of forwarded header group containing headers with "X" prefix for including in
-     * {@see $forwardedHeaderGroups}. In this case, the group contains multiple headers and the data is passed
-     * separately among them.
+     * The forwarded header group containing headers with "X" prefix for including in {@see $forwardedHeaderGroups}. In
+     * this case, the group contains multiple headers and the data is passed separately among them.
      */
     public const FORWARDED_HEADER_GROUP_X_PREFIX = [
         'ip' => 'x-forwarded-for',
@@ -146,9 +145,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns new instance with changed list of trusted IPs from connection chain.
+     * Returns a new instance with changed list of connection chain trusted IPs
      *
-     * @param array $trustedIps List of trusted IPs from connection chain.
+     * @param array $trustedIps List of connection chain trusted IPs.
      * @return self New instance.
      *
      * @throws InvalidArgumentException When list is empty or contains invalid IPs.
@@ -176,11 +175,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns new instance with changed list of forwarded header groups to parse the data from. By including headers
+     * Returns a new instance with changed list of forwarded header groups to parse the data from. By including headers
      * in this list, they are trusted automatically.
      *
-     * The header groups are processed in the order they are defined. If the header containing IP is present and
-     * non-empty, this group will be selected and further ones - ignored.
+     * The header groups are processed in the order they are defined. If the header containing IP is present and is
+     * non-empty, this group will be selected and further ones will be ignored.
      *
      * @param array $headerGroups List of forwarded header groups.
      * @return self New instance.
@@ -254,10 +253,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns new instance with changed list of headers that are considered related to forwarding.
+     * Returns a new instance with changed list of headers that are considered related to forwarding.
      *
-     * The headers that are present in this list but missing in matching forwarded header group will be deleted from
-     * request because they are potentially not secure and likely were not passed by proxy server.
+     * The headers that are present in this list but missing in a matching forwarded header group will be deleted from
+     * request because they are potentially not secure and likely were not passed by a proxy server.
      *
      * @param array $headerNames List of headers that are considered related to forwarding. Header names are
      * case-insensitive.
@@ -282,8 +281,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns new instance with changed name of request's attribute for storing validated and trusted connection chain
-     * items.
+     * Returns a new instance with changed name of request's attribute for storing validated and trusted connection
+     * chain items.
      *
      * @param string|null $attribute The name of request's attribute. Can be set to `null` to disable saving completely.
      * @return self New instance.
@@ -310,8 +309,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * @throws RuntimeException When value returned from protocol resolving callable in {@see $forwardedHeaderGroups} or
      * overridden {@see reverseObfuscateIpIdentifier} method is incorrect.
      * @throws RfcProxyParseException When parsing of {@see FORWARDED_HEADER_RFC} failed.
-     * @throws InvalidConnectionChainItemException When resolved data of connection chain item - either IP, protocol,
-     * host or port is invalid.
+     * @throws InvalidConnectionChainItemException When resolved data of connection chain item (IP, protocol, host or
+     * port) is invalid.
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {

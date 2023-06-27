@@ -137,8 +137,19 @@ final class ProcessTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => null,
-                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                    'requestClientIp' => '18.18.18.18',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
             yield 'headers with "X" prefix, no trusted IPs' => [
@@ -150,8 +161,19 @@ final class ProcessTest extends TestCase
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
                 [
-                    'requestClientIp' => null,
-                    'connectionChainItemsAttribute' => ['connectionChainItems', null],
+                    'requestClientIp' => '18.18.18.18',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
                 ],
             ],
 

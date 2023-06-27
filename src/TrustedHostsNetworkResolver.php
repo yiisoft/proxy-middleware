@@ -256,7 +256,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * Returns a new instance with changed list of headers that are considered related to forwarding.
      *
-     * The headers that are present in this list but missing in matching forwarded header group will be deleted from
+     * The headers that are present in this list but missing in a matching forwarded header group will be deleted from
      * request because they are potentially not secure and likely were not passed by a proxy server.
      *
      * @param array $headerNames List of headers that are considered related to forwarding. Header names are

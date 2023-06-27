@@ -1176,6 +1176,47 @@ final class ProcessTest extends TestCase
                     'port' => 8082,
                 ],
             ],
+            yield 'RFC header, IP related data, port in host, priority over port in IP' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="9.9.9.9:8083";proto=http;host=example3.com',
+                            'for="5.5.5.5:8082";proto=https;host="example2.com:8085"',
+                            'for="2.2.2.2";proto=http;host="example1.com:8084"',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '5.5.5.5',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => 'http',
+                                'host' => 'example1.com',
+                                'port' => 8084,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'https',
+                    'host' => 'example2.com',
+                    'port' => 8085,
+                ],
+            ],
         ];
     }
 

@@ -641,11 +641,22 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 }
             }
 
+            $host = $directiveMap['host'] ?? null;
+            $port = null;
+            if ($host !== null) {
+                /** @infection-ignore-all IncrementInteger */
+                $hostParts = explode(':', $host, 2);
+                $host = $hostParts[0];
+
+                if (isset($hostParts[1])) {
+                    $port = $hostParts[1];
+                }
+            }
+
             $wasIpValidated = false;
 
             if ($this->checkIpIdentifier($directiveMap['for'])) {
                 $ip = null;
-                $port = null;
                 $ipIdentifier = $directiveMap['for'];
             } else {
                 if (preg_match($forPattern, $directiveMap['for'], $matches) === 0) {
@@ -673,14 +684,17 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                     }
                 }
 
-                $port = $matches['port'] ?? null;
+                if ($port === null && isset($matches['port'])) {
+                    $port = $matches['port'];
+                }
+
                 $ipIdentifier = null;
             }
 
             $proxies[] = $this->getConnectionChainItem(
                 ip: $ip,
                 protocol: $directiveMap['proto'] ?? null,
-                host: $directiveMap['host'] ?? null,
+                host: $host,
                 port: $port,
                 ipIdentifier: $ipIdentifier,
                 validateIp: !$wasIpValidated,

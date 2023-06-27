@@ -67,7 +67,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     public const FORWARDED_HEADER_RFC = 'forwarded';
     /**
-     * The name of forwarded header group containing forwarded header according to RFC 7239 for including in
+     * The forwarded header group containing forwarded header according to RFC 7239 for including in
      * {@see $forwardedHeaderGroups}. In this case the group contains only 1 header with all the data -
      * {@see FORWARDED_HEADER_RFC}.
      *
@@ -75,9 +75,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     public const FORWARDED_HEADER_GROUP_RFC = self::FORWARDED_HEADER_RFC;
     /**
-     * The name of forwarded header group containing headers with "X" prefix for including in
-     * {@see $forwardedHeaderGroups}. In this case, the group contains multiple headers and the data is passed
-     * separately among them.
+     * The forwarded header group containing headers with "X" prefix for including in {@see $forwardedHeaderGroups}. In
+     * this case, the group contains multiple headers and the data is passed separately among them.
      */
     public const FORWARDED_HEADER_GROUP_X_PREFIX = [
         'ip' => 'x-forwarded-for',

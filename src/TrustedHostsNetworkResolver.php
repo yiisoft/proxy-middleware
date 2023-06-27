@@ -146,7 +146,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns new instance with changed list of trusted IPs from connection chain.
+     * Returns a new instance with changed list of trusted IPs from connection chain.
      *
      * @param array $trustedIps List of trusted IPs from connection chain.
      * @return self New instance.
@@ -176,7 +176,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns new instance with changed list of forwarded header groups to parse the data from. By including headers
+     * Returns a new instance with changed list of forwarded header groups to parse the data from. By including headers
      * in this list, they are trusted automatically.
      *
      * The header groups are processed in the order they are defined. If the header containing IP is present and
@@ -254,7 +254,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns new instance with changed list of headers that are considered related to forwarding.
+     * Returns a new instance with changed list of headers that are considered related to forwarding.
      *
      * The headers that are present in this list but missing in matching forwarded header group will be deleted from
      * request because they are potentially not secure and likely were not passed by proxy server.
@@ -282,8 +282,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns new instance with changed name of request's attribute for storing validated and trusted connection chain
-     * items.
+     * Returns a new instance with changed name of request's attribute for storing validated and trusted connection
+     * chain items.
      *
      * @param string|null $attribute The name of request's attribute. Can be set to `null` to disable saving completely.
      * @return self New instance.

@@ -235,7 +235,7 @@ $middleware = $middleware->withTypicalForwardedHeaders([
 ```
 
 The headers that are present in this list but missing in matching forwarded header group will be deleted from request 
-because they are potentially not secure and likely were not passed by proxy server.
+because they are potentially not secure and likely were not passed by a proxy server.
 
 For example, with default forwarded header groups' setup used as well:
 

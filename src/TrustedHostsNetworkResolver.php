@@ -146,9 +146,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * Returns a new instance with changed list of trusted IPs from connection chain.
+     * Returns a new instance with changed list of connection chain trusted IPs
      *
-     * @param array $trustedIps List of trusted IPs from connection chain.
+     * @param array $trustedIps List of connection chain trusted IPs.
      * @return self New instance.
      *
      * @throws InvalidArgumentException When list is empty or contains invalid IPs.

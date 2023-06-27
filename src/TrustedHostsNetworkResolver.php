@@ -179,8 +179,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * Returns a new instance with changed list of forwarded header groups to parse the data from. By including headers
      * in this list, they are trusted automatically.
      *
-     * The header groups are processed in the order they are defined. If the header containing IP is present and
-     * non-empty, this group will be selected and further ones - ignored.
+     * The header groups are processed in the order they are defined. If the header containing IP is present and is
+     * non-empty, this group will be selected and further ones will be ignored.
      *
      * @param array $headerGroups List of forwarded header groups.
      * @return self New instance.

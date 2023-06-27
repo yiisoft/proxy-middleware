@@ -135,8 +135,8 @@ one data unit (for example, IP). Headers with "X" prefix are quite common despit
   - [X-Forwarded-Host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) - host.
   - `X-Forwarded-Port` - port.
 
-The header groups are processed in the order they are defined. If the header containing IP is present and non-empty, 
-this group will be selected and further ones - ignored.
+The header groups are processed in the order they are defined. If the header containing IP is present and is non-empty, 
+this group will be selected and further ones will be ignored.
 
 You can add support for custom headers and/or change priority:
 

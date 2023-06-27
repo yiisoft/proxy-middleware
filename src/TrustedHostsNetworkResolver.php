@@ -310,8 +310,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * @throws RuntimeException When value returned from protocol resolving callable in {@see $forwardedHeaderGroups} or
      * overridden {@see reverseObfuscateIpIdentifier} method is incorrect.
      * @throws RfcProxyParseException When parsing of {@see FORWARDED_HEADER_RFC} failed.
-     * @throws InvalidConnectionChainItemException When resolved data of connection chain item - either IP, protocol,
-     * host or port is invalid.
+     * @throws InvalidConnectionChainItemException When resolved data of connection chain item (IP, protocol, host or
+     * port) is invalid.
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {

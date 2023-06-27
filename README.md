@@ -21,6 +21,9 @@ The package provides proxy related middleware classes that implement
 - [`TrustedHeaderProtocolResolver`](#trustedheaderprotocolresolver).
 - [`TrustedHostsNetworkResolver`](#trustedhostsnetworkresolver).
 
+For other miscellaneous middleware, there is a separate package -
+[Yii Middleware](https://github.com/yiisoft/yii-middleware).
+
 For more information on how to use middleware in the [Yii Framework](https://www.yiiframework.com/), see the 
 [Yii middleware guide](https://github.com/yiisoft/docs/blob/master/guide/en/structure/middleware.md).
 

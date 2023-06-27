@@ -150,13 +150,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * @param array $trustedIps List of connection chain trusted IPs.
      * @return self New instance.
      *
-     * @throws InvalidArgumentException When list is empty or contains invalid IPs.
+     * @throws InvalidArgumentException When list contains invalid IPs.
      * @see https://github.com/yiisoft/proxy-middleware#trusted-ips For detailed explanation and example.
      */
     public function withTrustedIps(array $trustedIps): self
     {
-        $this->assertNonEmpty($trustedIps, 'Trusted IPs');
-
         $validatedIps = [];
         foreach ($trustedIps as $ip) {
             $this->assertIsNonEmptyString($ip, 'Trusted IP');
@@ -316,7 +314,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
         /** @var string|null $remoteAddr */
         $remoteAddr = $request->getServerParams()['REMOTE_ADDR'] ?? null;
-        if (empty($remoteAddr)) {
+        if (empty($remoteAddr) || empty($this->trustedIps)) {
             return $this->handleNotTrusted($request, $handler);
         }
 

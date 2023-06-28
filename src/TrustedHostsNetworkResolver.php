@@ -126,7 +126,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * @psalm-var list<non-empty-string>
      * @psalm-suppress PropertyNotSetInConstructor
      */
-    private array $trustedIps;
+    private array $trustedIps = [];
     /**
      * @psalm-var ForwardedHeaderGroups
      */
@@ -314,7 +314,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
         /** @var string|null $remoteAddr */
         $remoteAddr = $request->getServerParams()['REMOTE_ADDR'] ?? null;
-        if (empty($remoteAddr) || empty($this->trustedIps)) {
+        if (empty($remoteAddr)) {
             return $this->handleNotTrusted($request, $handler);
         }
 
@@ -527,7 +527,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function getConnectionChainItems(string $remoteAddr, ServerRequestInterface $request): array
     {
-        $items = [$this->getConnectionChainItem(ip: $remoteAddr)];
+        /** @infection-ignore-all FalseValue */
+        $items = [$this->getConnectionChainItem(ip: $remoteAddr, validateIp: false)];
         foreach ($this->forwardedHeaderGroups as $forwardedHeaderGroup) {
             if ($forwardedHeaderGroup === self::FORWARDED_HEADER_GROUP_RFC) {
                 /** @psalm-var list<string> $forwardedHeaderValue */
@@ -800,16 +801,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             /** @psalm-var ConnectionChainItem $rawItem */
 
-            if ($proxiesCount >= 2) {
-                $item = $rawItem;
+            $item = $rawItem;
+
+            $isIpTrusted = $this->checkTrustedIp($ip);
+            if ($proxiesCount === 1 || $isIpTrusted) {
+                $validatedItems[] = $item;
             }
 
-            if (!$this->checkTrustedIp($ip)) {
+            if (!$isIpTrusted) {
                 break;
             }
-
-            $item = $rawItem;
-            $validatedItems[] = $item;
         } while (count($remainingItems) > 0);
 
         return $item;
@@ -868,7 +869,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function checkTrustedIp(string $value): bool
     {
-        return (new Ip(ranges: $this->trustedIps))->isAllowed($value);
+        return !empty($this->trustedIps) && (new Ip(ranges: $this->trustedIps))->isAllowed($value);
     }
 
     /**

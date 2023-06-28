@@ -763,7 +763,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         array $items,
         array &$validatedItems,
         ServerRequestInterface $request,
-    ): ?array
+    ): array
     {
         $remainingItems = $items;
         $proxiesCount = 0;

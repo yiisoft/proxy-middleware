@@ -327,9 +327,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             $validatedConnectionChainItems,
             $request,
         );
-        if ($connectionChainItem === null) {
-            return $this->handleNotTrusted($request, $handler);
-        }
 
         if ($this->connectionChainItemsAttribute !== null) {
             $request = $request->withAttribute($this->connectionChainItemsAttribute, $validatedConnectionChainItems);
@@ -768,7 +765,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         ServerRequestInterface $request,
     ): ?array
     {
-        $item = null;
         $remainingItems = $items;
         $proxiesCount = 0;
 

@@ -795,12 +795,12 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 break;
             }
 
-            /** @psalm-var ConnectionChainItem $rawItem */
-
             /** @infection-ignore-all  GreaterThan */
             if ($proxiesCount > 1 && $this->checkPrivateIp($ip)) {
                 break;
             }
+
+            /** @psalm-var ConnectionChainItem $rawItem */
 
             $item = $rawItem;
 

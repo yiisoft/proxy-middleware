@@ -222,7 +222,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                             $this->assertIsNonEmptyString($key, 'Key in mapping for protocol header');
                             $this->assertIsAllowedProtocol($value, 'Value in mapping for protocol header');
                         }
-                    } elseif(!is_callable($headerGroup['protocol'][1])) {
+                    } elseif (!is_callable($headerGroup['protocol'][1])) {
                         $message = 'Protocol header resolving must be specified either via an associative array or a ' .
                             'callable.';
 
@@ -238,7 +238,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
                 $validatedHeaderGroups[] = $validatedHeaderGroup;
             } else {
-                $message = 'Forwarded header group must be either an associative array or '.
+                $message = 'Forwarded header group must be either an associative array or ' .
                     'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.';
 
                 throw new InvalidArgumentException($message);
@@ -797,6 +797,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             /** @psalm-var ConnectionChainItem $rawItem */
 
+            /** @infection-ignore-all  GreaterThan */
+            if ($proxiesCount > 1 && $this->checkPrivateIp($ip)) {
+                break;
+            }
+
             $item = $rawItem;
 
             $isIpTrusted = $this->checkTrustedIp($ip);
@@ -858,6 +863,14 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             ->validator
             ->validate($value, [new Ip(allowIpv4: false)])
             ->isValid();
+    }
+
+    /**
+     * @psalm-param non-empty-string $value
+     */
+    private function checkPrivateIp(string $value): bool
+    {
+        return (new Ip(ranges: ['private']))->isAllowed($value);
     }
 
     /**

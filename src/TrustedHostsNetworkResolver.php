@@ -126,7 +126,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * @psalm-var list<non-empty-string>
      * @psalm-suppress PropertyNotSetInConstructor
      */
-    private array $trustedIps;
+    private array $trustedIps = [];
     /**
      * @psalm-var ForwardedHeaderGroups
      */
@@ -150,13 +150,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * @param array $trustedIps List of connection chain trusted IPs.
      * @return self New instance.
      *
-     * @throws InvalidArgumentException When list is empty or contains invalid IPs.
+     * @throws InvalidArgumentException When list contains invalid IPs.
      * @see https://github.com/yiisoft/proxy-middleware#trusted-ips For detailed explanation and example.
      */
     public function withTrustedIps(array $trustedIps): self
     {
-        $this->assertNonEmpty($trustedIps, 'Trusted IPs');
-
         $validatedIps = [];
         foreach ($trustedIps as $ip) {
             $this->assertIsNonEmptyString($ip, 'Trusted IP');
@@ -329,9 +327,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             $validatedConnectionChainItems,
             $request,
         );
-        if ($connectionChainItem === null) {
-            return $this->handleNotTrusted($request, $handler);
-        }
 
         if ($this->connectionChainItemsAttribute !== null) {
             $request = $request->withAttribute($this->connectionChainItemsAttribute, $validatedConnectionChainItems);
@@ -529,7 +524,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function getConnectionChainItems(string $remoteAddr, ServerRequestInterface $request): array
     {
-        $items = [$this->getConnectionChainItem(ip: $remoteAddr)];
+        /** @infection-ignore-all FalseValue */
+        $items = [$this->getConnectionChainItem(ip: $remoteAddr, validateIp: false)];
         foreach ($this->forwardedHeaderGroups as $forwardedHeaderGroup) {
             if ($forwardedHeaderGroup === self::FORWARDED_HEADER_GROUP_RFC) {
                 /** @psalm-var list<string> $forwardedHeaderValue */
@@ -640,11 +636,22 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 }
             }
 
+            $host = $directiveMap['host'] ?? null;
+            $port = null;
+            if ($host !== null) {
+                /** @infection-ignore-all IncrementInteger */
+                $hostParts = explode(':', $host, 2);
+                $host = $hostParts[0];
+
+                if (isset($hostParts[1])) {
+                    $port = $hostParts[1];
+                }
+            }
+
             $wasIpValidated = false;
 
             if ($this->checkIpIdentifier($directiveMap['for'])) {
                 $ip = null;
-                $port = null;
                 $ipIdentifier = $directiveMap['for'];
             } else {
                 if (preg_match($forPattern, $directiveMap['for'], $matches) === 0) {
@@ -672,14 +679,17 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                     }
                 }
 
-                $port = $matches['port'] ?? null;
+                if ($port === null && isset($matches['port'])) {
+                    $port = $matches['port'];
+                }
+
                 $ipIdentifier = null;
             }
 
             $proxies[] = $this->getConnectionChainItem(
                 ip: $ip,
                 protocol: $directiveMap['proto'] ?? null,
-                host: $directiveMap['host'] ?? null,
+                host: $host,
                 port: $port,
                 ipIdentifier: $ipIdentifier,
                 validateIp: !$wasIpValidated,
@@ -753,9 +763,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         array $items,
         array &$validatedItems,
         ServerRequestInterface $request,
-    ): ?array
+    ): array
     {
-        $item = null;
         $remainingItems = $items;
         $proxiesCount = 0;
 
@@ -788,16 +797,16 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             /** @psalm-var ConnectionChainItem $rawItem */
 
-            if ($proxiesCount >= 2) {
-                $item = $rawItem;
+            $item = $rawItem;
+
+            $isIpTrusted = $this->checkTrustedIp($ip);
+            if ($proxiesCount === 1 || $isIpTrusted) {
+                $validatedItems[] = $item;
             }
 
-            if (!$this->checkTrustedIp($ip)) {
+            if (!$isIpTrusted) {
                 break;
             }
-
-            $item = $rawItem;
-            $validatedItems[] = $item;
         } while (count($remainingItems) > 0);
 
         return $item;
@@ -856,7 +865,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function checkTrustedIp(string $value): bool
     {
-        return (new Ip(ranges: $this->trustedIps))->isAllowed($value);
+        return !empty($this->trustedIps) && (new Ip(ranges: $this->trustedIps))->isAllowed($value);
     }
 
     /**

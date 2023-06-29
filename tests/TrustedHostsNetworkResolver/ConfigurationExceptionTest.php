@@ -12,10 +12,6 @@ final class ConfigurationExceptionTest extends TestCase
     public function dataWithTrustedIpsException(): array
     {
         return [
-            'empty' => [
-                [],
-                'Trusted IPs can\'t be empty.',
-            ],
             'contains not a string' => [
                 ['8.8.8.8', 1, '18.18.18.18'],
                 'Trusted IP must be non-empty string.',

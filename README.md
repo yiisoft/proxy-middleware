@@ -15,11 +15,21 @@
 [![type-coverage](https://shepherd.dev/github/yiisoft/proxy-middleware/coverage.svg)](https://shepherd.dev/github/yiisoft/proxy-middleware)
 [![psalm-level](https://shepherd.dev/github/yiisoft/proxy-middleware/level.svg)](https://shepherd.dev/github/yiisoft/proxy-middleware)
 
-The package ...
+The package provides proxy related middleware classes that implement 
+[PSR-15](https://www.php-fig.org/psr/psr-15/#12-middleware):
+
+- [`TrustedHeaderProtocolResolver`](#trustedheaderprotocolresolver).
+- [`TrustedHostsNetworkResolver`](#trustedhostsnetworkresolver).
+
+For other miscellaneous middleware, there is a separate package -
+[Yii Middleware](https://github.com/yiisoft/yii-middleware).
+
+For more information on how to use middleware in the [Yii Framework](https://www.yiiframework.com/), see the 
+[Yii middleware guide](https://github.com/yiisoft/docs/blob/master/guide/en/structure/middleware.md).
 
 ## Requirements
 
-- PHP 8.1 or higher.
+- PHP 8.0 or higher.
 
 ## Installation
 

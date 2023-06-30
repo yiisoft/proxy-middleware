@@ -17,6 +17,12 @@ use Yiisoft\ProxyMiddleware\Exception\RfcProxyParseException;
 use Yiisoft\Validator\Rule\Ip;
 use Yiisoft\Validator\ValidatorInterface;
 
+use function count;
+use function in_array;
+use function is_array;
+use function is_callable;
+use function is_string;
+
 /**
  * Scans the entire connection chain and resolves the data from forwarded headers taking into account trusted IPs.
  * Additionally, all items' structure is thoroughly validated because headers' data can't be trusted. The following data
@@ -399,9 +405,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             return;
         }
 
-        $expeptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
+        $exceptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
 
-        throw new $expeptionClassName("$name can't be empty.");
+        throw new $exceptionClassName("$name can't be empty.");
     }
 
     /**
@@ -421,9 +427,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
         $allowedKeysStr = implode('", "', $allowedKeys);
         $message = "Invalid array keys for $name. The allowed and required keys are: \"$allowedKeysStr\".";
-        $expeptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
+        $exceptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
 
-        throw new $expeptionClassName($message);
+        throw new $exceptionClassName($message);
     }
 
     /**
@@ -436,9 +442,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             return;
         }
 
-        $expeptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
+        $exceptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
 
-        throw new $expeptionClassName("$name must be non-empty string.");
+        throw new $exceptionClassName("$name must be non-empty string.");
     }
 
     /**
@@ -455,9 +461,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
         $allowedProtocolsStr = implode('", "', self::ALLOWED_PROTOCOLS);
         $message = "$name must be a valid protocol. Allowed values are: \"$allowedProtocolsStr\" (case-sensitive).";
-        $expeptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
+        $exceptionClassName = $inRuntime ? RuntimeException::class : InvalidArgumentException::class;
 
-        throw new $expeptionClassName($message);
+        throw new $exceptionClassName($message);
     }
 
     private function handleNotTrusted(
@@ -521,6 +527,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * @psalm-param non-empty-string $remoteAddr
      *
      * @psalm-return array{0: ForwardedHeaderGroup, 1: list<RawConnectionChainItem>}
+     *
+     * @throws InvalidConnectionChainItemException
+     * @throws RfcProxyParseException
      */
     private function getConnectionChainItems(string $remoteAddr, ServerRequestInterface $request): array
     {
@@ -609,6 +618,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * @psalm-return list<RawConnectionChainItem>
      *
      * @link https://tools.ietf.org/html/rfc7239
+     *
+     * @throws RfcProxyParseException
+     * @throws InvalidConnectionChainItemException
      */
     private function parseProxiesFromRfcHeader(array $proxyItems): array
     {
@@ -701,6 +713,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
     /**
      * @psalm-return RawConnectionChainItem
+     *
+     * @throws InvalidConnectionChainItemException
      */
     private function getConnectionChainItem(
         ?string $ip = null,

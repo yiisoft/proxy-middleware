@@ -125,6 +125,19 @@ final class ConfigurationExceptionTest extends TestCase
                 ],
                 'Header name for "host" must be non-empty string.',
             ],
+            'ip: value is empty string' => [
+                [
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC,
+                    [
+                        'ip' => '',
+                        'protocol' => 'y-forwarded-proto',
+                        'host' => 'y-forwarded-host',
+                        'port' => 'y-forwarded-port',
+                    ],
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
+                ],
+                'Header name for "ip" must be non-empty string.',
+            ],
             'protocol: value is neither a string nor an array' => [
                 [
                     TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC,
@@ -234,6 +247,22 @@ final class ConfigurationExceptionTest extends TestCase
                         'ip' => 'y-forwarded-for',
                         'protocol' => [
                             'y-forwarded-proto',
+                            'test',
+                        ],
+                        'host' => 'y-forwarded-host',
+                        'port' => 'y-forwarded-port',
+                    ],
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
+                ],
+                'Protocol header resolving must be specified either via an associative array or a callable.',
+            ],
+            'protocol, array, resolving: name equal to exists function' => [
+                [
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC,
+                    [
+                        'ip' => 'y-forwarded-for',
+                        'protocol' => [
+                            '\Yiisoft\ProxyMiddleware\Tests\TrustedHostsNetworkResolver\testCallableFunction',
                             'test',
                         ],
                         'host' => 'y-forwarded-host',
@@ -387,4 +416,8 @@ final class ConfigurationExceptionTest extends TestCase
         $this->expectExceptionMessage('Attribute can\'t be empty.');
         $middleware->withConnectionChainItemsAttribute('');
     }
+}
+
+function testCallableFunction(): void
+{
 }

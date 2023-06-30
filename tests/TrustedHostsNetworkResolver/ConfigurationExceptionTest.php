@@ -125,6 +125,19 @@ final class ConfigurationExceptionTest extends TestCase
                 ],
                 'Header name for "host" must be non-empty string.',
             ],
+            'ip: value is empty string' => [
+                [
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC,
+                    [
+                        'ip' => '',
+                        'protocol' => 'y-forwarded-proto',
+                        'host' => 'y-forwarded-host',
+                        'port' => 'y-forwarded-port',
+                    ],
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
+                ],
+                'Header name for "ip" must be non-empty string.',
+            ],
             'protocol: value is neither a string nor an array' => [
                 [
                     TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC,

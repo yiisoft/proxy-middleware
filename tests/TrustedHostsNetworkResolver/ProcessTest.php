@@ -445,6 +445,162 @@ final class ProcessTest extends TestCase
                     ],
                 ],
             ],
+            yield 'RFC header, contains IP from private network, IPv4' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '192.168.0.1', '2.2.2.2', '18.18.18.18'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: ['Forwarded' => ['for=9.9.9.9', 'for=192.168.0.1', 'for=2.2.2.2']],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '2.2.2.2',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            yield 'headers with "X" prefix, contain IP from private network, IPv4' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '192.168.0.1', '2.2.2.2', '18.18.18.18'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: ['X-Forwarded-For' => ['9.9.9.9', '192.168.0.1', '2.2.2.2']],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '2.2.2.2',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            yield 'RFC header, contains IP from private network, IPv6' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps([
+                        '2001:db8:3333:4444:5555:6666:7777:8888',
+                        'fd12:3456:789a:1::1',
+                        '2001:db8:3333:4444:5555:6666:7777:2222',
+                        '2001:db8:3333:4444:5555:6666:7777:0000',
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'Forwarded' => [
+                            'for="[2001:db8:3333:4444:5555:6666:7777:9999]"',
+                            'for="[fd12:3456:789a:1::1]"',
+                            'for="[2001:db8:3333:4444:5555:6666:7777:2222]"',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '2001:db8:3333:4444:5555:6666:7777:0000'],
+                ),
+                [
+                    'requestClientIp' => '2001:db8:3333:4444:5555:6666:7777:2222',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '2001:db8:3333:4444:5555:6666:7777:0000',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2001:db8:3333:4444:5555:6666:7777:2222',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'http',
+                    'host' => null,
+                    'port' => null,
+                ],
+            ],
+            yield 'headers with "X" prefix, contain IP from private network, IPv6' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps([
+                        '2001:db8:3333:4444:5555:6666:7777:8888',
+                        'fd12:3456:789a:1::1',
+                        '2001:db8:3333:4444:5555:6666:7777:2222',
+                        '2001:db8:3333:4444:5555:6666:7777:0000',
+                    ])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => [
+                            '2001:db8:3333:4444:5555:6666:7777:9999',
+                            'fd12:3456:789a:1::1',
+                            '2001:db8:3333:4444:5555:6666:7777:2222',
+                        ],
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '2001:db8:3333:4444:5555:6666:7777:0000'],
+                ),
+                [
+                    'requestClientIp' => '2001:db8:3333:4444:5555:6666:7777:2222',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '2001:db8:3333:4444:5555:6666:7777:0000',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2001:db8:3333:4444:5555:6666:7777:2222',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                    'protocol' => 'http',
+                    'host' => null,
+                    'port' => null,
+                ],
+            ],
 
             yield 'RFC header, priority over headers with "X" prefix, IP related data' => [
                 $this
@@ -542,7 +698,7 @@ final class ProcessTest extends TestCase
                     ->withTrustedIps([
                         '2001:db8:3333:4444:5555:6666:7777:8888',
                         '2001:db8:3333:4444:5555:6666:7777:2222',
-                        '2001:db8:3333:4444:5555:6666:7777:0000'
+                        '2001:db8:3333:4444:5555:6666:7777:0000',
                     ])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(
@@ -587,7 +743,7 @@ final class ProcessTest extends TestCase
                     ->withTrustedIps([
                         '2001:db8:3333:4444:5555:6666:7777:8888',
                         '2001:db8:3333:4444:5555:6666:7777:2222',
-                        '2001:db8:3333:4444:5555:6666:7777:0000'
+                        '2001:db8:3333:4444:5555:6666:7777:0000',
                     ])
                     ->withConnectionChainItemsAttribute('connectionChainItems'),
                 $this->createRequest(

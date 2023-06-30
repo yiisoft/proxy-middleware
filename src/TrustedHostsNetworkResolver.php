@@ -159,7 +159,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         foreach ($trustedIps as $ip) {
             $this->assertIsNonEmptyString($ip, 'Trusted IP');
 
-            if (!$this->checkIp($ip)) {
+            if (!$this->isIp($ip)) {
                 throw new InvalidArgumentException("\"$ip\" is not a valid IP.");
             }
 
@@ -449,7 +449,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
         $this->assertIsNonEmptyString($value, $name);
 
-        if ($this->checkProtocol($value)) {
+        if ($this->isProtocol($value)) {
             return;
         }
 
@@ -650,7 +650,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             $wasIpValidated = false;
 
-            if ($this->checkIpIdentifier($directiveMap['for'])) {
+            if ($this->isIpIdentifier($directiveMap['for'])) {
                 $ip = null;
                 $ipIdentifier = $directiveMap['for'];
             } else {
@@ -663,7 +663,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 if (isset($matches['ipv6']) && !empty($matches['ipv6'])) {
                     $ip = $matches['ipv6'];
 
-                    if (!$this->checkIpv6($ip)) {
+                    if (!$this->isIpv6($ip)) {
                         $message = "Enclosing in square brackets assumes presence of valid IPv6, \"$ip\" given.";
 
                         throw new RfcProxyParseException($message);
@@ -712,11 +712,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         bool $validateProtocol = true,
     ): array
     {
-        if ($ip !== null && $validateIp && !$this->checkIp($ip)) {
+        if ($ip !== null && $validateIp && !$this->isIp($ip)) {
             throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP.");
         }
 
-        if ($protocol !== null && $validateProtocol && !$this->checkProtocol($protocol)) {
+        if ($protocol !== null && $validateProtocol && !$this->isProtocol($protocol)) {
             $allowedProtocolsStr = implode('", "', self::ALLOWED_PROTOCOLS);
             $message = "\"$protocol\" protocol is not allowed. Allowed values are: \"$allowedProtocolsStr\" " .
                 '(case-sensitive).';
@@ -724,11 +724,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             throw new InvalidConnectionChainItemException($message);
         }
 
-        if ($host !== null && !$this->checkHost($host)) {
+        if ($host !== null && !$this->isHost($host)) {
             throw new InvalidConnectionChainItemException("\"$host\" is not a valid host.");
         }
 
-        if ($port !== null && !$this->checkPort($port)) {
+        if ($port !== null && !$this->isPort($port)) {
             $portMin = self::PORT_MIN;
             $portMax = self::PORT_MAX;
             $message = "\"$port\" is not a valid port. Port must be a number between $portMin and $portMax.";
@@ -796,7 +796,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             }
 
             /** @infection-ignore-all  GreaterThan */
-            if ($proxiesCount > 1 && $this->checkPrivateIp($ip)) {
+            if ($proxiesCount > 1 && $this->isPrivateIp($ip)) {
                 break;
             }
 
@@ -804,7 +804,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
             $item = $rawItem;
 
-            $isIpTrusted = $this->checkTrustedIp($ip);
+            $isIpTrusted = $this->isTrustedIp($ip);
             if ($proxiesCount === 1 || $isIpTrusted) {
                 $validatedItems[] = $item;
             }
@@ -833,12 +833,12 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         if ($ipData[1] !== null) {
             $this->assertIsNonEmptyString($ipData[1], 'Port returned from reverse-obfuscated IP data', inRuntime: true);
 
-            if (!$this->checkPort($ipData[1])) {
+            if (!$this->isPort($ipData[1])) {
                 throw new RuntimeException('Port returned from reverse-obfuscated IP data is not valid.');
             }
         }
 
-        if (!$this->checkIp($ipData[0])) {
+        if (!$this->isIp($ipData[0])) {
             throw new RuntimeException('IP returned from reverse-obfuscated IP data is not valid.');
         }
     }
@@ -846,7 +846,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-assert non-empty-string $value
      */
-    private function checkIp(string $value): bool
+    private function isIp(string $value): bool
     {
         return $this
             ->validator
@@ -857,7 +857,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-assert non-empty-string $value
      */
-    private function checkIpv6(string $value): bool
+    private function isIpv6(string $value): bool
     {
         return $this
             ->validator
@@ -868,7 +868,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-param non-empty-string $value
      */
-    private function checkPrivateIp(string $value): bool
+    private function isPrivateIp(string $value): bool
     {
         return (new Ip(ranges: ['private']))->isAllowed($value);
     }
@@ -876,7 +876,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-param non-empty-string $value
      */
-    private function checkTrustedIp(string $value): bool
+    private function isTrustedIp(string $value): bool
     {
         return !empty($this->trustedIps) && (new Ip(ranges: $this->trustedIps))->isAllowed($value);
     }
@@ -884,7 +884,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-assert TrustedHostsNetworkResolver::PROTOCOL_* $value
      */
-    private function checkProtocol(string $value): bool
+    private function isProtocol(string $value): bool
     {
         return in_array($value, self::ALLOWED_PROTOCOLS);
     }
@@ -892,7 +892,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-assert non-empty-string $value
      */
-    private function checkHost(string $value): bool
+    private function isHost(string $value): bool
     {
         return filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
     }
@@ -900,7 +900,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-assert non-empty-string $value
      */
-    private function checkPort(string $value): bool
+    private function isPort(string $value): bool
     {
         return $value >= self::PORT_MIN && $value <= self::PORT_MAX;
     }
@@ -908,7 +908,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-assert non-empty-string $value
      */
-    private function checkIpIdentifier(string $value): bool
+    private function isIpIdentifier(string $value): bool
     {
         return $value === 'unknown' || preg_match('/^_[\w.-]+$/', $value) !== 0;
     }

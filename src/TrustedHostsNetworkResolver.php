@@ -154,9 +154,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * Returns a new instance with changed list of connection chain trusted IPs
      *
      * @param array $trustedIps List of connection chain trusted IPs.
+     * @throws InvalidArgumentException When list contains invalid IPs.
      * @return self New instance.
      *
-     * @throws InvalidArgumentException When list contains invalid IPs.
      * @see https://github.com/yiisoft/proxy-middleware#trusted-ips For detailed explanation and example.
      */
     public function withTrustedIps(array $trustedIps): self
@@ -186,9 +186,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * non-empty, this group will be selected and further ones will be ignored.
      *
      * @param array $headerGroups List of forwarded header groups.
+     * @throws InvalidArgumentException When the structure/contents of header groups is incorrect.
      * @return self New instance.
      *
-     * @throws InvalidArgumentException When the structure/contents of header groups is incorrect.
      * @see https://github.com/yiisoft/proxy-middleware#forwarded-header-groups For detailed explanation and examples.
      */
     public function withForwardedHeaderGroups(array $headerGroups): self
@@ -264,9 +264,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      *
      * @param array $headerNames List of headers that are considered related to forwarding. Header names are
      * case-insensitive.
+     * @throws InvalidArgumentException When list is empty or header within it is empty.
      * @return self New instance.
      *
-     * @throws InvalidArgumentException When list is empty or header within it is empty.
      * @see https://github.com/yiisoft/proxy-middleware#typical-forwarded-headers For example.
      */
     public function withTypicalForwardedHeaders(array $headerNames): self
@@ -289,9 +289,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      * chain items.
      *
      * @param string|null $attribute The name of request's attribute. Can be set to `null` to disable saving completely.
+     * @throws InvalidArgumentException When attribute name is empty.
      * @return self New instance.
      *
-     * @throws InvalidArgumentException When attribute name is empty.
      * @see https://github.com/yiisoft/proxy-middleware#accessing-resolved-data For example.
      */
     public function withConnectionChainItemsAttribute(?string $attribute): self
@@ -419,8 +419,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         array $array,
         string $name,
         bool $inRuntime = false,
-    ): void
-    {
+    ): void {
         if (array_keys($array) === $allowedKeys) {
             return;
         }
@@ -483,8 +482,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     private function filterTypicalForwardedHeaders(
         string|array $forwardedHeaderGroup,
         ServerRequestInterface $request,
-    ): ServerRequestInterface
-    {
+    ): ServerRequestInterface {
         $forwardedHeaders = $this->getForwardedHeadersFromGroup($forwardedHeaderGroup);
         $headers = array_diff($this->typicalForwardedHeaders, $forwardedHeaders);
         foreach ($headers as $header) {
@@ -578,8 +576,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     private function getProtocolFromSeparateHeader(
         ServerRequestInterface $request,
         string|array $configValue,
-    ): ?string
-    {
+    ): ?string {
         if (is_string($configValue)) {
             return $request->getHeaderLine($configValue) ?: null;
         }
@@ -724,8 +721,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         ?string $ipIdentifier = null,
         bool $validateIp = true,
         bool $validateProtocol = true,
-    ): array
-    {
+    ): array {
         if ($ip !== null && $validateIp && !$this->isIp($ip)) {
             throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP.");
         }
@@ -777,8 +773,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         array $items,
         array &$validatedItems,
         ServerRequestInterface $request,
-    ): array
-    {
+    ): array {
         $remainingItems = $items;
         $proxiesCount = 0;
 

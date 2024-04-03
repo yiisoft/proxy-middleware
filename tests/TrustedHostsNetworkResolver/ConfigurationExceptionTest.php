@@ -298,7 +298,7 @@ final class ConfigurationExceptionTest extends TestCase
                             [
                                 'on1' => 'https',
                                 2 => 'https',
-                                'on3' => 'https'
+                                'on3' => 'https',
                             ],
                         ],
                         'host' => 'y-forwarded-host',
@@ -318,7 +318,7 @@ final class ConfigurationExceptionTest extends TestCase
                             [
                                 'on1' => 'https',
                                 '' => 'https',
-                                'on3' => 'https'
+                                'on3' => 'https',
                             ],
                         ],
                         'host' => 'y-forwarded-host',
@@ -338,7 +338,7 @@ final class ConfigurationExceptionTest extends TestCase
                             [
                                 'on1' => 'https',
                                 'on2' => 'https2',
-                                'on3' => 'https'
+                                'on3' => 'https',
                             ],
                         ],
                         'host' => 'y-forwarded-host',
@@ -358,8 +358,7 @@ final class ConfigurationExceptionTest extends TestCase
     public function testWithForwardedHeaderGroupsException(
         array $forwardedHeaderGroups,
         string $expectedExceptionMessage,
-    ): void
-    {
+    ): void {
         $middleware = $this->createMiddleware();
 
         $this->expectException(InvalidArgumentException::class);
@@ -399,8 +398,7 @@ final class ConfigurationExceptionTest extends TestCase
     public function testWithTypicalForwardedHeadersException(
         array $typicalForwardedHeaders,
         string $expectedExceptionMessage,
-    ): void
-    {
+    ): void {
         $middleware = $this->createMiddleware();
 
         $this->expectException(InvalidArgumentException::class);

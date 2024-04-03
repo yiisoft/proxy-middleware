@@ -1033,7 +1033,7 @@ final class ProcessTest extends TestCase
                             'ip' => 'y-forwarded-for',
                             'protocol' => [
                                 'front-end-https',
-                                static fn (string $protocol): ?string => $protocol === 'On' ? 'https': 'http',
+                                static fn (string $protocol): ?string => $protocol === 'On' ? 'https' : 'http',
                             ],
                             'host' => 'y-forwarded-host',
                             'port' => 'y-forwarded-port',
@@ -1276,7 +1276,7 @@ final class ProcessTest extends TestCase
                                 'host' => 'example1.com',
                                 'port' => 8081,
                                 'ipIdentifier' => null,
-                            ]
+                            ],
                         ],
                     ],
                     'protocol' => 'http',
@@ -1317,7 +1317,7 @@ final class ProcessTest extends TestCase
                                 'host' => 'example1.com',
                                 'port' => 8081,
                                 'ipIdentifier' => null,
-                            ]
+                            ],
                         ],
                     ],
                     'protocol' => 'http',
@@ -1326,15 +1326,13 @@ final class ProcessTest extends TestCase
                 ],
             ],
             yield 'RFC header, IP related data, hidden IP, obfuscated, reverse-obfuscating' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver
-                {
+                (new class (new Validator()) extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
                         array $remainingConnectionChainItems,
                         RequestInterface $request,
-                    ): ?array
-                    {
+                    ): ?array {
                         return match ($ipIdentifier) {
                             '_obfuscated1' => ['2.2.2.2', null],
                             '_obfuscated2' => ['5.5.5.5', '8082'],
@@ -1372,7 +1370,7 @@ final class ProcessTest extends TestCase
                                 'host' => 'example1.com',
                                 'port' => null,
                                 'ipIdentifier' => '_obfuscated1',
-                            ]
+                            ],
                         ],
                     ],
                     'protocol' => 'https',
@@ -1431,8 +1429,7 @@ final class ProcessTest extends TestCase
         TrustedHostsNetworkResolver $middleware,
         ServerRequestInterface $request,
         array $expectedData,
-    ): void
-    {
+    ): void {
         $requestHandler = new MockRequestHandler();
 
         $response = $middleware->process($request, $requestHandler);

@@ -275,8 +275,7 @@ final class ConfigurationTest extends TestCase
         TrustedHostsNetworkResolver $middleware,
         ServerRequestInterface $request,
         array $expectedData,
-    ): void
-    {
+    ): void {
         $requestHandler = new MockRequestHandler();
 
         $response = $middleware->process($request, $requestHandler);

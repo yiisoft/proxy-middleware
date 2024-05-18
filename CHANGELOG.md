@@ -1,4 +1,4 @@
-# _____ Change Log
+# Yii Proxy Middleware Change Log
 
 ## 1.0.1 under development
 

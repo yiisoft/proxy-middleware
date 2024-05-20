@@ -1,6 +1,6 @@
 <p align="center">
     <a href="https://github.com/yiisoft" target="_blank">
-        <img src="https://yiisoft.github.io/docs/images/yii_logo.svg" height="100px">
+        <img src="https://yiisoft.github.io/docs/images/yii_logo.svg" height="100px" alt="Yii">
     </a>
     <h1 align="center">Yii Proxy Middleware</h1>
     <br>
@@ -15,7 +15,7 @@
 [![type-coverage](https://shepherd.dev/github/yiisoft/proxy-middleware/coverage.svg)](https://shepherd.dev/github/yiisoft/proxy-middleware)
 [![psalm-level](https://shepherd.dev/github/yiisoft/proxy-middleware/level.svg)](https://shepherd.dev/github/yiisoft/proxy-middleware)
 
-The package provides proxy related middleware classes that implement 
+The package provides proxy related middleware classes that implement
 [PSR-15](https://www.php-fig.org/psr/psr-15/#12-middleware):
 
 - [`TrustedHeaderProtocolResolver`](#trustedheaderprotocolresolver).
@@ -24,7 +24,7 @@ The package provides proxy related middleware classes that implement
 For other miscellaneous middleware, there is a separate package -
 [Yii Middleware](https://github.com/yiisoft/yii-middleware).
 
-For more information on how to use middleware in the [Yii Framework](https://www.yiiframework.com/), see the 
+For more information on how to use middleware in the [Yii Framework](https://www.yiiframework.com/), see the
 [Yii middleware guide](https://github.com/yiisoft/docs/blob/master/guide/en/structure/middleware.md).
 
 ## Requirements
@@ -72,15 +72,15 @@ $response = $middleware->process($request, $handler);
 ### `TrustedHostsNetworkResolver`
 
 Scans the entire connection chain and resolves the data from forwarded headers taking into account trusted IPs.
-Additionally, all items' structure is thoroughly validated because headers' data can't be trusted. The following data is 
+Additionally, all items' structure is thoroughly validated because headers' data can't be trusted. The following data is
 resolved:
 
 - IP.
 - Protocol
 - Host.
 - Port.
-- IP identifier - [unknown](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2) or 
-[obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.3). Used with `Forwarded` RFC header. 
+- IP identifier - [unknown](https://datatracker.ietf.org/doc/html/rfc7239#section-6.2) or
+[obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.3). Used with `Forwarded` RFC header.
 
 The typical use case is having an application behind a load balancer.
 
@@ -89,8 +89,8 @@ The typical use case is having an application behind a load balancer.
 A list of trusted IPs from connection chain.
 
 Proxies' IPs including the one in `$_SERVER['REMOTE_ADDR']` must be specified here. For example, for
-`$_SERVER['REMOTE_ADDR']` with value `18.18.18.18` and 2 other proxies - `2.2.2.2` and `8.8.8.8`, the configuration will 
-be: 
+`$_SERVER['REMOTE_ADDR']` with value `18.18.18.18` and 2 other proxies - `2.2.2.2` and `8.8.8.8`, the configuration will
+be:
 
 ```php
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
@@ -136,7 +136,7 @@ $middleware = $middleware->withForwardedHeaderGroups([
 
 The accepted values are:
 
-- `TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC` string constant. Parse all data from single `Forwarded` 
+- `TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC` string constant. Parse all data from single `Forwarded`
 header according to [RFC 7239](https://datatracker.ietf.org/doc/html/rfc7239).
 - Array. Parse data from separate forwarded headers with "X" prefix. Unlike with RFC variation, each header stores only
 one data unit (for example, IP). Headers with "X" prefix are quite common despite being non-standard:
@@ -145,7 +145,7 @@ one data unit (for example, IP). Headers with "X" prefix are quite common despit
   - [X-Forwarded-Host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) - host.
   - `X-Forwarded-Port` - port.
 
-The header groups are processed in the order they are defined. If the header containing IP is present and is non-empty, 
+The header groups are processed in the order they are defined. If the header containing IP is present and is non-empty,
 this group will be selected and further ones will be ignored.
 
 You can add support for custom headers and/or change priority:
@@ -244,7 +244,7 @@ $middleware = $middleware->withTypicalForwardedHeaders([
 ]);
 ```
 
-The headers that are present in this list but missing in a matching forwarded header group will be deleted from request 
+The headers that are present in this list but missing in a matching forwarded header group will be deleted from request
 because they are potentially not secure and likely were not passed by a proxy server.
 
 For example, with default forwarded header groups' setup used as well:
@@ -285,7 +285,7 @@ middleware will remove these headers from request:
 - `x-forwarded-port`.
 - `front-end-https`.
 
-because RFC group is matching and the rest can't be trusted. The headers that are not declared as typical forwarded 
+because RFC group is matching and the rest can't be trusted. The headers that are not declared as typical forwarded
 headers will be left as is (`Non-Forwarded` in the example above).
 
 #### Accessing resolved data
@@ -299,7 +299,7 @@ use Psr\Http\Message\ServerRequestInterface;
 $ip = $request->getAttribute(TrustedHostsNetworkResolver::ATTRIBUTE_REQUEST_CLIENT_IP);
 ```
 
-There is an additional attribute allowing to retrieve all previous validated and trusted connection chain items. It 
+There is an additional attribute allowing to retrieve all previous validated and trusted connection chain items. It
 needs explicit configuration:
 
 ```php
@@ -311,7 +311,7 @@ $middleware = $middleware->withConnectionChainItemsAttribute('connectionChainIte
 // ...
 /** @var ServerRequestInterface $request */
 $connectionChainItems = $request->getAttribute('connectionChainItems');
-``` 
+```
 
 An example of contents:
 
@@ -336,7 +336,7 @@ An example of contents:
 
 #### Reverse-obfuscating IP identifier
 
-You may extend middleware class and provide reverse-obfuscating logic for 
+You may extend middleware class and provide reverse-obfuscating logic for
 [obfuscated](https://datatracker.ietf.org/doc/html/rfc7239#section-6.3) IP identifiers:
 
 ```php

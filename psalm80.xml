@@ -15,5 +15,6 @@
     </projectFiles>
     <issueHandlers>
         <MixedAssignment errorLevel="suppress" />
+        <RedundantConditionGivenDocblockType errorLevel="suppress" />
     </issueHandlers>
 </psalm>

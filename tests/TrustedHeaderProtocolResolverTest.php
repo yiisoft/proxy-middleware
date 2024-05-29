@@ -192,30 +192,26 @@ final class TrustedHeaderProtocolResolverTest extends TestCase
     public function schemeCallableFailureDataProvider(): array
     {
         return [
-            'int' => [1],
-            'float' => [1.1],
-            'true' => [true],
-            'false' => [false],
-            'array' => [['https']],
+            'int' => [[1]],
+            'float' => [[1.1]],
+            'true' => [[true]],
+            'false' => [[false]],
+            'array' => [[['https']]],
             'empty-array' => [[]],
-            'empty-string' => [''],
-            'object' => [new StdClass()],
-            'callable' => [static fn () => 'https'],
+            'empty-string' => [['']],
+            'object' => [[new StdClass()]],
+            'callable' => [[static fn () => 'https']],
         ];
     }
 
     /**
      * @dataProvider schemeCallableFailureDataProvider
      */
-    public function testCallableSchemeFailure(mixed $scheme): void
+    public function testCallableSchemeFailure(array $scheme): void
     {
         $request = $this->createMock(ServerRequestInterface::class);
-        $request
-            ->method('hasHeader')
-            ->willReturn(true);
-        $request
-            ->method('getHeader')
-            ->willReturn($scheme);
+        $request->method('hasHeader')->willReturn(true);
+        $request->method('getHeader')->willReturn($scheme);
 
         $middleware = (new TrustedHeaderProtocolResolver())
             ->withAddedProtocolHeader('x-forwarded-proto', static fn () => $scheme)

@@ -15,6 +15,6 @@
     </projectFiles>
     <issueHandlers>
         <MixedAssignment errorLevel="suppress" />
-        <RiskyTruthyFalsyComparison errorLevel="suppress" />
+        <RedundantConditionGivenDocblockType errorLevel="suppress" />
     </issueHandlers>
 </psalm>

@@ -14,8 +14,6 @@ use RuntimeException;
 use Yiisoft\Http\HeaderValueHelper;
 use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
 use Yiisoft\ProxyMiddleware\Exception\RfcProxyParseException;
-use Yiisoft\Validator\Rule\Ip;
-use Yiisoft\Validator\ValidatorInterface;
 
 use function count;
 use function in_array;
@@ -146,8 +144,11 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private ?string $connectionChainItemsAttribute = null;
 
-    public function __construct(private ValidatorInterface $validator)
+    private IpValidator $ipValidator;
+
+    public function __construct()
     {
+        $this->ipValidator = new IpValidator();
     }
 
     /**
@@ -857,10 +858,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function isIp(string $value): bool
     {
-        return $this
-            ->validator
-            ->validate($value, [new Ip()])
-            ->isValid();
+        return $this->ipValidator->validate($value);
     }
 
     /**
@@ -868,10 +866,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function isIpv6(string $value): bool
     {
-        return $this
-            ->validator
-            ->validate($value, [new Ip(allowIpv4: false)])
-            ->isValid();
+        return $this->ipValidator->validate($value, allowIpv4: false);
     }
 
     /**
@@ -879,7 +874,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function isPrivateIp(string $value): bool
     {
-        return (new Ip(ranges: ['private']))->isAllowed($value);
+        return $this->ipValidator->isAllowed($value, ['private']);
     }
 
     /**
@@ -887,7 +882,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function isTrustedIp(string $value): bool
     {
-        return !empty($this->trustedIps) && (new Ip(ranges: $this->trustedIps))->isAllowed($value);
+        return !empty($this->trustedIps) && $this->ipValidator->isAllowed($value, $this->trustedIps);
     }
 
     /**

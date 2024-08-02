@@ -22,14 +22,11 @@ final class IpValidator
         'system' => ['multicast', 'linklocal', 'localhost', 'documentation'],
     ];
 
-    private const IPV4_PATTERN = '((2(5[0-5]|[0-4]\d)|1\d{2}|[1-9]?\d)\.){3}(2(5[0-5]|[0-4]\d)|1\d{2}|[1-9]?\d)';
-    private const IPV6_PATTERN = '(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:' . self::IPV4_PATTERN . ')';
-
     public function validate(string $value, bool $allowIpv4 = true): bool
     {
-        if (preg_match('/^' . self::IPV4_PATTERN . '$/', $value) === 1) {
+        if (preg_match('/^' . IpHelper::IPV4_PATTERN . '$/', $value) === 1) {
             $isIpV4 = true;
-        } elseif (preg_match('/^' . self::IPV6_PATTERN . '$/', $value) === 1) {
+        } elseif (preg_match('/^' . IpHelper::IPV6_PATTERN . '$/', $value) === 1) {
             $isIpV4 = false;
         } else {
             return false;
@@ -64,21 +61,6 @@ final class IpValidator
     }
 
     /**
-     * Parses IP address/range for the negation with {@see NEGATION_CHARACTER}.
-     *
-     * @return array The result array consists of 2 elements:
-     * - `boolean`: whether the string is negated
-     * - `string`: the string without negation (when the negation were present)
-     *
-     * @psalm-return array{0: bool, 1: string}
-     */
-    private function parseNegatedRange(string $string): array
-    {
-        $isNegated = str_starts_with($string, '!');
-        return [$isNegated, $isNegated ? substr($string, 1) : $string];
-    }
-
-    /**
      * Prepares array to fill in {@see $ranges}:
      *
      *  - Recursively substitutes aliases, described in {@see $networks} with their values.
@@ -105,5 +87,20 @@ final class IpValidator
         }
 
         return array_unique($result);
+    }
+
+    /**
+     * Parses IP address/range for the negation with `!`.
+     *
+     * @return array The result array consists of 2 elements:
+     * - `boolean`: whether the string is negated
+     * - `string`: the string without negation (when the negation were present)
+     *
+     * @psalm-return array{0: bool, 1: string}
+     */
+    private function parseNegatedRange(string $string): array
+    {
+        $isNegated = str_starts_with($string, '!');
+        return [$isNegated, $isNegated ? substr($string, 1) : $string];
     }
 }

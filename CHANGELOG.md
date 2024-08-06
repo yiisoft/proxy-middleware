@@ -1,6 +1,6 @@
 # Yii Proxy Middleware Change Log
 
-## 1.0.2 under development
+## 1.0.2 August 06, 2024
 
 - Enh #42: Replace `yiisoft/validator` dependency to `yiisoft/network-utilities` (@vjik)
 

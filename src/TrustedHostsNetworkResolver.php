@@ -144,6 +144,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private ?string $connectionChainItemsAttribute = null;
 
+    public function __construct()
+    {
+    }
+
     /**
      * Returns a new instance with changed list of connection chain trusted IPs
      *

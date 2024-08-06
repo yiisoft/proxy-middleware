@@ -12,6 +12,7 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
 use Yiisoft\Http\HeaderValueHelper;
+use Yiisoft\NetworkUtilities\IpRanges;
 use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
 use Yiisoft\ProxyMiddleware\Exception\RfcProxyParseException;
 
@@ -128,7 +129,6 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
     /**
      * @psalm-var list<non-empty-string>
-     * @psalm-suppress PropertyNotSetInConstructor
      */
     private array $trustedIps = [];
     /**
@@ -166,7 +166,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         foreach ($trustedIps as $ip) {
             $this->assertIsNonEmptyString($ip, 'Trusted IP');
 
-            if (!$this->isIp($ip)) {
+            if (!$this->ipValidator->isIp($ip)) {
                 throw new InvalidArgumentException("\"$ip\" is not a valid IP.");
             }
 
@@ -673,7 +673,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 if (isset($matches['ipv6']) && !empty($matches['ipv6'])) {
                     $ip = $matches['ipv6'];
 
-                    if (!$this->isIpv6($ip)) {
+                    if (!$this->ipValidator->isIpV6($ip)) {
                         $message = "Enclosing in square brackets assumes presence of valid IPv6, \"$ip\" given.";
 
                         throw new RfcProxyParseException($message);
@@ -723,7 +723,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
         bool $validateIp = true,
         bool $validateProtocol = true,
     ): array {
-        if ($ip !== null && $validateIp && !$this->isIp($ip)) {
+        if ($ip !== null && $validateIp && !$this->ipValidator->isIp($ip)) {
             throw new InvalidConnectionChainItemException("\"$ip\" is not a valid IP.");
         }
 
@@ -848,25 +848,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             }
         }
 
-        if (!$this->isIp($ipData[0])) {
+        if (!$this->ipValidator->isIp($ipData[0])) {
             throw new RuntimeException('IP returned from reverse-obfuscated IP data is not valid.');
         }
-    }
-
-    /**
-     * @psalm-assert non-empty-string $value
-     */
-    private function isIp(string $value): bool
-    {
-        return $this->ipValidator->validate($value);
-    }
-
-    /**
-     * @psalm-assert non-empty-string $value
-     */
-    private function isIpv6(string $value): bool
-    {
-        return $this->ipValidator->validate($value, allowIpv4: false);
     }
 
     /**
@@ -874,7 +858,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function isPrivateIp(string $value): bool
     {
-        return $this->ipValidator->isAllowed($value, ['private']);
+        return $this->ipValidator->inRanges($value, [IpRanges::PRIVATE]);
     }
 
     /**
@@ -882,7 +866,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private function isTrustedIp(string $value): bool
     {
-        return !empty($this->trustedIps) && $this->ipValidator->isAllowed($value, $this->trustedIps);
+        return !empty($this->trustedIps) && $this->ipValidator->inRanges($value, $this->trustedIps);
     }
 
     /**

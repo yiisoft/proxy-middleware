@@ -35,7 +35,7 @@
         "psr/http-server-handler": "^1.0",
         "psr/http-server-middleware": "^1.0",
         "yiisoft/http": "^1.2",
-        "yiisoft/network-utilities": "^1.0"
+        "yiisoft/network-utilities": "^1.1"
     },
     "require-dev": {
         "httpsoft/http-message": "^1.0",

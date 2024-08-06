@@ -11,7 +11,6 @@ use Yiisoft\ProxyMiddleware\Exception\InvalidConnectionChainItemException;
 use Yiisoft\ProxyMiddleware\Exception\RfcProxyParseException;
 use Yiisoft\ProxyMiddleware\Tests\Support\MockRequestHandler;
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
-use Yiisoft\Validator\Validator;
 
 final class RuntimeExceptionTest extends TestCase
 {
@@ -509,7 +508,7 @@ final class RuntimeExceptionTest extends TestCase
     {
         return [
             yield 'empty array' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver {
+                (new class () extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -533,7 +532,7 @@ final class RuntimeExceptionTest extends TestCase
                 'Reverse-obfuscated IP data can\'t be empty.',
             ],
             yield 'wrong items count' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver {
+                (new class () extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -557,7 +556,7 @@ final class RuntimeExceptionTest extends TestCase
                 'Invalid array keys for reverse-obfuscated IP data. The allowed and required keys are: "0", "1".',
             ],
             yield 'IP: not a string' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver {
+                (new class () extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -581,7 +580,7 @@ final class RuntimeExceptionTest extends TestCase
                 'IP returned from reverse-obfuscated IP data must be non-empty string.',
             ],
             yield 'IP: empty string' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver {
+                (new class () extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -605,7 +604,7 @@ final class RuntimeExceptionTest extends TestCase
                 'IP returned from reverse-obfuscated IP data must be non-empty string.',
             ],
             yield 'IP: invalid' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver {
+                (new class () extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -629,7 +628,7 @@ final class RuntimeExceptionTest extends TestCase
                 'IP returned from reverse-obfuscated IP data is not valid.',
             ],
             yield 'port: empty string' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver {
+                (new class () extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -653,7 +652,7 @@ final class RuntimeExceptionTest extends TestCase
                 'Port returned from reverse-obfuscated IP data must be non-empty string.',
             ],
             yield 'IP: valid port instead of IP, port: invalid' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver {
+                (new class () extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,

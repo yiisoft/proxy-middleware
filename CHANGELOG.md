@@ -2,7 +2,7 @@
 
 ## 1.0.2 under development
 
-- no changes in this release.
+- Enh #42: Replace `yiisoft/validator` dependency to `yiisoft/network-utilities` (@vjik)
 
 ## 1.0.1 June 02, 2024
 

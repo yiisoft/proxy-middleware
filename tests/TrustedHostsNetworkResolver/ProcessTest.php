@@ -9,7 +9,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Http\Status;
 use Yiisoft\ProxyMiddleware\Tests\Support\MockRequestHandler;
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
-use Yiisoft\Validator\Validator;
 
 final class ProcessTest extends TestCase
 {
@@ -1326,7 +1325,7 @@ final class ProcessTest extends TestCase
                 ],
             ],
             yield 'RFC header, IP related data, hidden IP, obfuscated, reverse-obfuscating' => [
-                (new class (new Validator()) extends TrustedHostsNetworkResolver {
+                (new class () extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,

@@ -8,15 +8,12 @@ use HttpSoft\Message\ServerRequest;
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
-use Yiisoft\Validator\Validator;
 
 class TestCase extends PHPUnitTestCase
 {
     protected function createMiddleware(): TrustedHostsNetworkResolver
     {
-        $validator = new Validator();
-
-        return new TrustedHostsNetworkResolver($validator);
+        return new TrustedHostsNetworkResolver();
     }
 
     protected function createRequest(

@@ -62,6 +62,8 @@ use function is_string;
  *     port: ?int,
  *     ipIdentifier: ?non-empty-string,
  * }
+ *
+ * @psalm-suppress ClassMustBeFinal We allow to extend this class.
  */
 class TrustedHostsNetworkResolver implements MiddlewareInterface
 {
@@ -522,7 +524,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     /**
      * @psalm-param non-empty-string $remoteAddr
      *
-     * @psalm-return array{0: ForwardedHeaderGroup, 1: list<RawConnectionChainItem>}
+     * @psalm-return array{0: ForwardedHeaderGroup, 1: non-empty-list<RawConnectionChainItem>}
      *
      * @throws InvalidConnectionChainItemException
      * @throws RfcProxyParseException
@@ -551,6 +553,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             }
 
             $items = [];
+            /**
+             * @psalm-var non-empty-list<string> $requestIps It needs for PHP 8.0 only
+             */
             $requestIps = array_merge([$remoteAddr], array_reverse($forwardedHeaderValue));
             foreach ($requestIps as $requestIp) {
                 $items[] = $this->getConnectionChainItem(
@@ -761,7 +766,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     }
 
     /**
-     * @psalm-param list<RawConnectionChainItem> $items
+     * @psalm-param non-empty-list<RawConnectionChainItem> $items
      * @psalm-param list<ConnectionChainItem> $validatedItems
      * @psalm-param-out list<ConnectionChainItem> $validatedItems
      *

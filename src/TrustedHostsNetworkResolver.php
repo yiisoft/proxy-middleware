@@ -553,6 +553,9 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             }
 
             $items = [];
+            /**
+             * @psalm-var non-empty-list<string> $requestIps It needs for PHP 8.0 only
+             */
             $requestIps = array_merge([$remoteAddr], array_reverse($forwardedHeaderValue));
             foreach ($requestIps as $requestIp) {
                 $items[] = $this->getConnectionChainItem(

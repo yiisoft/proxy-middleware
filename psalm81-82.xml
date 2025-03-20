@@ -16,6 +16,5 @@
     <issueHandlers>
         <MixedAssignment errorLevel="suppress" />
         <RiskyTruthyFalsyComparison errorLevel="suppress" />
-        <MissingClassConstType errorLevel="suppress" />
     </issueHandlers>
 </psalm>

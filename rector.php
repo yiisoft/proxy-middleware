@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Rector\CodeQuality\Rector\Class_\InlineConstructorDefaultToPropertyRector;
 use Rector\Config\RectorConfig;
-use Rector\Php56\Rector\FunctionLike\AddDefaultValueForUndefinedVariableRector;
 use Rector\Php74\Rector\Closure\ClosureToArrowFunctionRector;
 
 return RectorConfig::configure()
@@ -18,5 +17,4 @@ return RectorConfig::configure()
     ])
     ->withSkip([
         ClosureToArrowFunctionRector::class,
-        AddDefaultValueForUndefinedVariableRector::class,
     ]);

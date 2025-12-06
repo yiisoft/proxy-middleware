@@ -199,7 +199,7 @@ final class TrustedHeaderProtocolResolverTest extends TestCase
             'array' => [[['https']]],
             'empty-array' => [[]],
             'empty-string' => [['']],
-            'object' => [[new StdClass()]],
+            'object' => [[new stdClass()]],
             'callable' => [[static fn () => 'https']],
         ];
     }

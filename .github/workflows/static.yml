@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   psalm80:
-    uses: yiisoft/actions/.github/workflows/psalm.yml@ab62d6b3b0e0cff6c9724ec5a395bedb41c639a2
+    uses: yiisoft/actions/.github/workflows/psalm.yml@master
     with:
       psalm-config: psalm80.xml
       os: >-
@@ -36,7 +36,7 @@ jobs:
       php: >-
         ['8.0']
   psalm81-82:
-    uses: yiisoft/actions/.github/workflows/psalm.yml@ab62d6b3b0e0cff6c9724ec5a395bedb41c639a2
+    uses: yiisoft/actions/.github/workflows/psalm.yml@master
     with:
       psalm-config: psalm81-82.xml
       os: >-
@@ -44,7 +44,7 @@ jobs:
       php: >-
         ['8.1', '8.2']
   psalm:
-    uses: yiisoft/actions/.github/workflows/psalm.yml@ab62d6b3b0e0cff6c9724ec5a395bedb41c639a2
+    uses: yiisoft/actions/.github/workflows/psalm.yml@master
     with:
       os: >-
         ['ubuntu-latest']

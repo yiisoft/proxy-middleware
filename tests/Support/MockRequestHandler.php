@@ -16,9 +16,7 @@ final class MockRequestHandler implements RequestHandlerInterface
     public ?ServerRequestInterface $processedRequest = null;
     private ?Throwable $handleException = null;
 
-    public function __construct(private int $responseStatusCode = Status::OK)
-    {
-    }
+    public function __construct(private int $responseStatusCode = Status::OK) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {

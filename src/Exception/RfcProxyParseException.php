@@ -12,6 +12,4 @@ use Exception;
  *
  * @link https://datatracker.ietf.org/doc/html/rfc7239
  */
-final class RfcProxyParseException extends Exception
-{
-}
+final class RfcProxyParseException extends Exception {}

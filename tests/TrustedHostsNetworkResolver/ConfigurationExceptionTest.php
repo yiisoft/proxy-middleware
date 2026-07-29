@@ -52,8 +52,8 @@ final class ConfigurationExceptionTest extends TestCase
                     1,
                     TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
                 ],
-                'Forwarded header group must be either an associative array or ' .
-                'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.',
+                'Forwarded header group must be either an associative array or '
+                . 'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.',
             ],
             'group: string, non-allowed' => [
                 [
@@ -61,8 +61,8 @@ final class ConfigurationExceptionTest extends TestCase
                     'test',
                     TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
                 ],
-                'Forwarded header group must be either an associative array or ' .
-                'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.',
+                'Forwarded header group must be either an associative array or '
+                . 'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.',
             ],
             'group: array, empty' => [
                 [
@@ -83,8 +83,8 @@ final class ConfigurationExceptionTest extends TestCase
                     ],
                     TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
                 ],
-                'Invalid array keys for forwarded header group. The allowed and required keys are: "ip", "protocol", ' .
-                '"host", "port".',
+                'Invalid array keys for forwarded header group. The allowed and required keys are: "ip", "protocol", '
+                . '"host", "port".',
             ],
             'group: array, incomplete keys' => [
                 [
@@ -96,8 +96,8 @@ final class ConfigurationExceptionTest extends TestCase
                     ],
                     TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
                 ],
-                'Invalid array keys for forwarded header group. The allowed and required keys are: "ip", "protocol", ' .
-                '"host", "port".',
+                'Invalid array keys for forwarded header group. The allowed and required keys are: "ip", "protocol", '
+                . '"host", "port".',
             ],
             'group: array, value is not a string' => [
                 [
@@ -346,8 +346,8 @@ final class ConfigurationExceptionTest extends TestCase
                     ],
                     TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
                 ],
-                'Value in mapping for protocol header must be a valid protocol. Allowed values are: "http", "https" ' .
-                '(case-sensitive).',
+                'Value in mapping for protocol header must be a valid protocol. Allowed values are: "http", "https" '
+                . '(case-sensitive).',
             ],
         ];
     }
@@ -416,6 +416,4 @@ final class ConfigurationExceptionTest extends TestCase
     }
 }
 
-function testCallableFunction(): void
-{
-}
+function testCallableFunction(): void {}

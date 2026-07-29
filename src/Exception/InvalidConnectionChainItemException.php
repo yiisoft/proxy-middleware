@@ -11,6 +11,4 @@ use Yiisoft\ProxyMiddleware\TrustedHostsNetworkResolver;
  * Used by {@see TrustedHostsNetworkResolver}. Thrown when resolved data of connection chain item - either IP, protocol,
  * host or port is invalid.
  */
-final class InvalidConnectionChainItemException extends Exception
-{
-}
+final class InvalidConnectionChainItemException extends Exception {}

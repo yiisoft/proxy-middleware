@@ -122,7 +122,7 @@ final class TrustedHeaderProtocolResolverTest extends TestCase
                 ],
                 [
                     'x-forwarded-proto-1' => ['http' => 'http'],
-                    'x-forwarded-proto-2' => static fn () => null,
+                    'x-forwarded-proto-2' => static fn() => null,
                     'x-forwarded-proto-3' => ['https' => 'https'],
                     'x-forwarded-proto-4' => ['http' => 'http'],
                 ],
@@ -200,7 +200,7 @@ final class TrustedHeaderProtocolResolverTest extends TestCase
             'empty-array' => [[]],
             'empty-string' => [['']],
             'object' => [[new stdClass()]],
-            'callable' => [[static fn () => 'https']],
+            'callable' => [[static fn() => 'https']],
         ];
     }
 
@@ -214,7 +214,7 @@ final class TrustedHeaderProtocolResolverTest extends TestCase
         $request->method('getHeader')->willReturn($scheme);
 
         $middleware = (new TrustedHeaderProtocolResolver())
-            ->withAddedProtocolHeader('x-forwarded-proto', static fn () => $scheme)
+            ->withAddedProtocolHeader('x-forwarded-proto', static fn() => $scheme)
         ;
 
         $this->expectException(RuntimeException::class);

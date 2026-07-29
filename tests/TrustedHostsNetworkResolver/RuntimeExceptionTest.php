@@ -442,7 +442,7 @@ final class RuntimeExceptionTest extends TestCase
                             'ip' => 'y-forwarded-for',
                             'protocol' => [
                                 'front-end-https',
-                                static fn (string $protocol): ?string => null,
+                                static fn(string $protocol): ?string => null,
                             ],
                             'host' => 'y-forwarded-host',
                             'port' => 'y-forwarded-port',
@@ -468,7 +468,7 @@ final class RuntimeExceptionTest extends TestCase
                             'ip' => 'y-forwarded-for',
                             'protocol' => [
                                 'front-end-https',
-                                static fn (string $protocol): ?string => 'test',
+                                static fn(string $protocol): ?string => 'test',
                             ],
                             'host' => 'y-forwarded-host',
                             'port' => 'y-forwarded-port',
@@ -483,8 +483,8 @@ final class RuntimeExceptionTest extends TestCase
                     ],
                     serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
                 ),
-                'Value returned from callable for protocol header must be a valid protocol. Allowed values are: ' .
-                '"http", "https" (case-sensitive).',
+                'Value returned from callable for protocol header must be a valid protocol. Allowed values are: '
+                . '"http", "https" (case-sensitive).',
             ],
         ];
     }
@@ -508,7 +508,7 @@ final class RuntimeExceptionTest extends TestCase
     {
         return [
             yield 'empty array' => [
-                (new class () extends TrustedHostsNetworkResolver {
+                (new class extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -532,7 +532,7 @@ final class RuntimeExceptionTest extends TestCase
                 'Reverse-obfuscated IP data can\'t be empty.',
             ],
             yield 'wrong items count' => [
-                (new class () extends TrustedHostsNetworkResolver {
+                (new class extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -556,7 +556,7 @@ final class RuntimeExceptionTest extends TestCase
                 'Invalid array keys for reverse-obfuscated IP data. The allowed and required keys are: "0", "1".',
             ],
             yield 'IP: not a string' => [
-                (new class () extends TrustedHostsNetworkResolver {
+                (new class extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -580,7 +580,7 @@ final class RuntimeExceptionTest extends TestCase
                 'IP returned from reverse-obfuscated IP data must be non-empty string.',
             ],
             yield 'IP: empty string' => [
-                (new class () extends TrustedHostsNetworkResolver {
+                (new class extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -604,7 +604,7 @@ final class RuntimeExceptionTest extends TestCase
                 'IP returned from reverse-obfuscated IP data must be non-empty string.',
             ],
             yield 'IP: invalid' => [
-                (new class () extends TrustedHostsNetworkResolver {
+                (new class extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -628,7 +628,7 @@ final class RuntimeExceptionTest extends TestCase
                 'IP returned from reverse-obfuscated IP data is not valid.',
             ],
             yield 'port: empty string' => [
-                (new class () extends TrustedHostsNetworkResolver {
+                (new class extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -652,7 +652,7 @@ final class RuntimeExceptionTest extends TestCase
                 'Port returned from reverse-obfuscated IP data must be non-empty string.',
             ],
             yield 'IP: valid port instead of IP, port: invalid' => [
-                (new class () extends TrustedHostsNetworkResolver {
+                (new class extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,
@@ -684,7 +684,7 @@ final class RuntimeExceptionTest extends TestCase
     public function testReverseObfuscateIpIdentifierException(
         TrustedHostsNetworkResolver $middleware,
         ServerRequestInterface $request,
-        string $expectedExceptionMessage
+        string $expectedExceptionMessage,
     ): void {
         $requestHandler = new MockRequestHandler();
 

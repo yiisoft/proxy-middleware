@@ -1032,7 +1032,7 @@ final class ProcessTest extends TestCase
                             'ip' => 'y-forwarded-for',
                             'protocol' => [
                                 'front-end-https',
-                                static fn (string $protocol): ?string => $protocol === 'On' ? 'https' : 'http',
+                                static fn(string $protocol): ?string => $protocol === 'On' ? 'https' : 'http',
                             ],
                             'host' => 'y-forwarded-host',
                             'port' => 'y-forwarded-port',
@@ -1325,7 +1325,7 @@ final class ProcessTest extends TestCase
                 ],
             ],
             yield 'RFC header, IP related data, hidden IP, obfuscated, reverse-obfuscating' => [
-                (new class () extends TrustedHostsNetworkResolver {
+                (new class extends TrustedHostsNetworkResolver {
                     protected function reverseObfuscateIpIdentifier(
                         string $ipIdentifier,
                         array $validatedConnectionChainItems,

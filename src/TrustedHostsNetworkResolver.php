@@ -22,6 +22,9 @@ use function is_array;
 use function is_callable;
 use function is_string;
 
+use const FILTER_FLAG_HOSTNAME;
+use const FILTER_VALIDATE_DOMAIN;
+
 /**
  * Scans the entire connection chain and resolves the data from forwarded headers taking into account trusted IPs.
  * Additionally, all items' structure is thoroughly validated because headers' data can't be trusted. The following data
@@ -146,9 +149,7 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
      */
     private ?string $connectionChainItemsAttribute = null;
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Returns a new instance with changed list of connection chain trusted IPs
@@ -229,8 +230,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                             $this->assertIsAllowedProtocol($value, 'Value in mapping for protocol header');
                         }
                     } elseif (!is_callable($headerGroup['protocol'][1])) {
-                        $message = 'Protocol header resolving must be specified either via an associative array or a ' .
-                            'callable.';
+                        $message = 'Protocol header resolving must be specified either via an associative array or a '
+                            . 'callable.';
 
                         throw new InvalidArgumentException($message);
                     }
@@ -244,8 +245,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
                 $validatedHeaderGroups[] = $validatedHeaderGroup;
             } else {
-                $message = 'Forwarded header group must be either an associative array or ' .
-                    'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.';
+                $message = 'Forwarded header group must be either an associative array or '
+                    . 'TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_RFC constant.';
 
                 throw new InvalidArgumentException($message);
             }
@@ -641,8 +642,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             foreach ($directiveMap as $name => $value) {
                 if (!in_array($name, self::ALLOWED_RFC_HEADER_DIRECTIVES)) {
                     $allowedDirectivesStr = implode('", "', self::ALLOWED_RFC_HEADER_DIRECTIVES);
-                    $message = "\"$name\" is not a valid directive. Allowed values are: \"$allowedDirectivesStr\" " .
-                        '(case-insensitive).';
+                    $message = "\"$name\" is not a valid directive. Allowed values are: \"$allowedDirectivesStr\" "
+                        . '(case-insensitive).';
 
                     throw new RfcProxyParseException($message);
                 }
@@ -731,8 +732,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
 
         if ($protocol !== null && $validateProtocol && !$this->isProtocol($protocol)) {
             $allowedProtocolsStr = implode('", "', self::ALLOWED_PROTOCOLS);
-            $message = "\"$protocol\" protocol is not allowed. Allowed values are: \"$allowedProtocolsStr\" " .
-                '(case-sensitive).';
+            $message = "\"$protocol\" protocol is not allowed. Allowed values are: \"$allowedProtocolsStr\" "
+                . '(case-sensitive).';
 
             throw new InvalidConnectionChainItemException($message);
         }

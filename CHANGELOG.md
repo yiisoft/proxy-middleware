@@ -3,6 +3,7 @@
 ## 1.0.3 under development
 
 - Chg #44: Change PHP constraint in `composer.json` to `8.0 - 8.4` (@vjik)
+- Chg #55: Explicitly import classes, functions, and constants in "use" section (@vjik)
 
 ## 1.0.2 August 06, 2024
 

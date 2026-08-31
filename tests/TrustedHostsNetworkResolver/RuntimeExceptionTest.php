@@ -191,6 +191,16 @@ final class RuntimeExceptionTest extends TestCase
                 ),
                 '"invalid5.5.5.5" is not a valid IP.',
             ],
+            yield 'IP, empty item in comma-separated header with "X" prefix' => [
+                $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
+                $this->createRequest(
+                    headers: [
+                        'X-Forwarded-For' => '9.9.9.9, , 2.2.2.2',
+                    ],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                '"" is not a valid IP.',
+            ],
             yield 'IP with port, headers with "X" prefix' => [
                 $this->createMiddleware()->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18']),
                 $this->createRequest(

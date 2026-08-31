@@ -2,6 +2,7 @@
 
 ## 1.0.3 under development
 
+- Bug #59: Parse comma-separated IP chains in non-RFC forwarded headers (@samdark)
 - Chg #44: Change PHP constraint in `composer.json` to `8.0 - 8.4` (@vjik)
 - Enh #55: Explicitly import constants in "use" section (@vjik)
 

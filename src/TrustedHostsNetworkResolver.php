@@ -547,9 +547,8 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
                 break;
             }
 
-            /** @psalm-var list<string> $forwardedHeaderValue */
-            $forwardedHeaderValue = $request->getHeader($forwardedHeaderGroup['ip']);
-            if (empty($forwardedHeaderValue) || empty($request->getHeaderLine($forwardedHeaderGroup['ip']))) {
+            $forwardedHeaderValue = $request->getHeaderLine($forwardedHeaderGroup['ip']);
+            if ($forwardedHeaderValue === '') {
                 continue;
             }
 
@@ -557,7 +556,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
             /**
              * @psalm-var non-empty-list<string> $requestIps It needs for PHP 8.0 only
              */
-            $requestIps = array_merge([$remoteAddr], array_reverse($forwardedHeaderValue));
+            $requestIps = array_merge(
+                [$remoteAddr],
+                array_reverse(array_map('\trim', explode(',', $forwardedHeaderValue))),
+            );
             foreach ($requestIps as $requestIp) {
                 $items[] = $this->getConnectionChainItem(
                     ip: $requestIp,

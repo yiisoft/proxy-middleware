@@ -1,5 +1,9 @@
 # Yii Proxy Middleware Change Log
 
+## 1.0.4 under development
+
+- no changes in this release.
+
 ## 1.0.3 August 31, 2026
 
 - Chg #44: Change PHP constraint in `composer.json` to `8.0 - 8.4` (@vjik)

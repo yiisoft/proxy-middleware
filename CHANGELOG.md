@@ -1,10 +1,10 @@
 # Yii Proxy Middleware Change Log
 
-## 1.0.3 under development
+## 1.0.3 August 31, 2026
 
-- Bug #59: Parse comma-separated IP chains in non-RFC forwarded headers (@samdark)
 - Chg #44: Change PHP constraint in `composer.json` to `8.0 - 8.4` (@vjik)
 - Enh #55: Explicitly import constants in "use" section (@vjik)
+- Bug #59: Parse comma-separated IP chains in non-RFC forwarded headers (@samdark)
 
 ## 1.0.2 August 06, 2024
 

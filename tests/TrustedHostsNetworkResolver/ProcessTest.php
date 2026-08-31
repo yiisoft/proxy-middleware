@@ -444,6 +444,84 @@ final class ProcessTest extends TestCase
                     ],
                 ],
             ],
+            yield 'headers with "X" prefix, comma-separated IPs' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: ['X-Forwarded-For' => '9.9.9.9, 7.7.7.7, 5.5.5.5, 2.2.2.2'],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '7.7.7.7',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '5.5.5.5',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            yield 'headers with "X" prefix, multiple comma-separated header values' => [
+                $this
+                    ->createMiddleware()
+                    ->withTrustedIps(['8.8.8.8', '5.5.5.5', '2.2.2.2', '18.18.18.18'])
+                    ->withConnectionChainItemsAttribute('connectionChainItems'),
+                $this->createRequest(
+                    headers: ['X-Forwarded-For' => ['9.9.9.9, 7.7.7.7', '5.5.5.5, 2.2.2.2']],
+                    serverParams: ['REMOTE_ADDR' => '18.18.18.18'],
+                ),
+                [
+                    'requestClientIp' => '7.7.7.7',
+                    'connectionChainItemsAttribute' => [
+                        'connectionChainItems',
+                        [
+                            [
+                                'ip' => '18.18.18.18',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '2.2.2.2',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                            [
+                                'ip' => '5.5.5.5',
+                                'protocol' => null,
+                                'host' => null,
+                                'port' => null,
+                                'ipIdentifier' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
             yield 'RFC header, contains IP from private network, IPv4' => [
                 $this
                     ->createMiddleware()
@@ -821,7 +899,7 @@ final class ProcessTest extends TestCase
                     'port' => 8080,
                 ],
             ],
-            yield 'custom headers, highest priority, IP related data' => [
+            yield 'custom headers, highest priority, comma-separated IP related data' => [
                 $this
                     ->createMiddleware()
                     ->withTrustedIps(['8.8.8.8', '2.2.2.2', '18.18.18.18'])
@@ -847,7 +925,7 @@ final class ProcessTest extends TestCase
                         'X-Forwarded-Proto' => ['http'],
                         'X-Forwarded-Host' => ['example2.com'],
                         'X-Forwarded-Port' => ['8020'],
-                        'Y-Forwarded-For' => ['9.9.9.9', '5.5.5.5', '2.2.2.2'],
+                        'Y-Forwarded-For' => '9.9.9.9, 5.5.5.5, 2.2.2.2',
                         'Y-Forwarded-Proto' => ['https'],
                         'Y-Forwarded-Host' => ['example3.com'],
                         'Y-Forwarded-Port' => ['8030'],

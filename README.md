@@ -148,6 +148,9 @@ one data unit (for example, IP). Headers with "X" prefix are quite common despit
 The header groups are processed in the order they are defined. If the header containing IP is present and is non-empty,
 this group will be selected and further ones will be ignored.
 
+IP headers in array-based groups are parsed as comma-separated lists. Multiple values of the same header are combined
+in their original order before the connection chain is resolved.
+
 You can add support for custom headers and/or change priority:
 
 ```php

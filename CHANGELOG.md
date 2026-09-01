@@ -2,7 +2,7 @@
 
 ## 1.0.4 under development
 
-- Chg #61: Add PHP 8.5 support (@vjik)
+- Enh #61: Add PHP 8.5 support (@vjik)
 
 ## 1.0.3 August 31, 2026
 

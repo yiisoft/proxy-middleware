@@ -29,7 +29,8 @@ For more information on how to use middleware in the [Yii Framework](https://www
 
 ## Requirements
 
-- PHP 8.0 or higher.
+- PHP 8.0 - 8.5.
+- `filter` PHP extension.
 
 ## Installation
 

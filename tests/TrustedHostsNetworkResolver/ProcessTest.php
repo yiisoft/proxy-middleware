@@ -1529,4 +1529,41 @@ final class ProcessTest extends TestCase
         $this->assertSame($expectedData['host'] ?? '', $uri->getHost());
         $this->assertSame($expectedData['port'] ?? null, $uri->getPort());
     }
+
+    public function testRemoteAddrNotSetResetsConnectionChainItemsAttribute(): void
+    {
+        $middleware = $this
+            ->createMiddleware()
+            ->withTrustedIps(['8.8.8.8'])
+            ->withConnectionChainItemsAttribute('connectionChainItems');
+        $request = $this
+            ->createRequest()
+            ->withAttribute('connectionChainItems', ['test']);
+        $requestHandler = new MockRequestHandler();
+
+        $middleware->process($request, $requestHandler);
+
+        $processedRequest = $requestHandler->processedRequest;
+        $this->assertNull($processedRequest->getAttribute('connectionChainItems', 'not-null'));
+        $this->assertNull(
+            $processedRequest->getAttribute(TrustedHostsNetworkResolver::ATTRIBUTE_REQUEST_CLIENT_IP, 'not-null'),
+        );
+    }
+
+    public function testRemoteAddrNotSetWithoutConnectionChainItemsAttribute(): void
+    {
+        $middleware = $this
+            ->createMiddleware()
+            ->withTrustedIps(['8.8.8.8']);
+        $request = $this->createRequest();
+        $requestHandler = new MockRequestHandler();
+
+        $response = $middleware->process($request, $requestHandler);
+
+        $this->assertSame(Status::OK, $response->getStatusCode());
+        $this->assertSame(
+            [TrustedHostsNetworkResolver::ATTRIBUTE_REQUEST_CLIENT_IP => null],
+            $requestHandler->processedRequest->getAttributes(),
+        );
+    }
 }

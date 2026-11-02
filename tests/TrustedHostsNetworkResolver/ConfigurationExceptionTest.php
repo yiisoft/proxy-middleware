@@ -349,6 +349,46 @@ final class ConfigurationExceptionTest extends TestCase
                 'Value in mapping for protocol header must be a valid protocol. Allowed values are: "http", "https" '
                 . '(case-sensitive).',
             ],
+            'protocol, array, resolving: array, value is not a string' => [
+                [
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC,
+                    [
+                        'ip' => 'y-forwarded-for',
+                        'protocol' => [
+                            'y-forwarded-proto',
+                            [
+                                'on1' => 'https',
+                                'on2' => 1,
+                                'on3' => 'https',
+                            ],
+                        ],
+                        'host' => 'y-forwarded-host',
+                        'port' => 'y-forwarded-port',
+                    ],
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
+                ],
+                'Value in mapping for protocol header must be non-empty string.',
+            ],
+            'protocol, array, resolving: array, value is an empty string' => [
+                [
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_RFC,
+                    [
+                        'ip' => 'y-forwarded-for',
+                        'protocol' => [
+                            'y-forwarded-proto',
+                            [
+                                'on1' => 'https',
+                                'on2' => '',
+                                'on3' => 'https',
+                            ],
+                        ],
+                        'host' => 'y-forwarded-host',
+                        'port' => 'y-forwarded-port',
+                    ],
+                    TrustedHostsNetworkResolver::FORWARDED_HEADER_GROUP_X_PREFIX,
+                ],
+                'Value in mapping for protocol header must be non-empty string.',
+            ],
         ];
     }
 

@@ -321,6 +321,10 @@ class TrustedHostsNetworkResolver implements MiddlewareInterface
     {
         /** @var string|null $remoteAddr */
         $remoteAddr = $request->getServerParams()['REMOTE_ADDR'] ?? null;
+        /**
+         * @psalm-suppress RiskyTruthyFalsyComparison Intentionally treat `null`, empty string and "0" as missing remote
+         * address: none of them is a valid IP.
+         */
         if (empty($remoteAddr)) {
             return $this->handleNotTrusted($request, $handler);
         }
